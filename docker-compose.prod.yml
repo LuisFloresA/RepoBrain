@@ -1,0 +1,34 @@
+# Override de producción: sobreescribe el stack de dev del docker-compose.yml.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+name: repobrain-prod
+
+services:
+  backend:
+    image: repobrain-backend:prod
+    environment:
+      ENVIRONMENT: production
+    # Sin bind mounts: imagen empacada
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  worker:
+    image: repobrain-backend:prod
+    environment:
+      ENVIRONMENT: production
+    restart: unless-stopped
+
+  frontend:
+    # En prod se sirve el estático con nginx (no-root) en lugar del dev server
+    build:
+      context: ./frontend
+    image: repobrain-frontend:prod
+    ports:
+      - "80:8080"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped

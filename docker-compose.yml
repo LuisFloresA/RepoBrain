@@ -1,0 +1,90 @@
+name: repobrain
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Puerto interno únicamente; no se expone al host por seguridad.
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  backend:
+    build:
+      context: ./backend
+    image: repobrain-backend:dev
+    environment:
+      ENVIRONMENT: development
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    # Puerto host 8001 para evitar colisión con otros contenedores (8000)
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/workers:/app/workers:ro
+      - repobrain_data:/app/data
+      - repobrain_workspace:/app/workspace
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  worker:
+    image: repobrain-backend:dev
+    command:
+      [
+        "celery",
+        "-A",
+        "workers.celery_app:celery_app",
+        "worker",
+        "--loglevel=info",
+      ]
+    environment:
+      ENVIRONMENT: development
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/workers:/app/workers:ro
+      - repobrain_data:/app/data
+      - repobrain_workspace:/app/workspace
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Dev: servidor Vite con hot-reload (bind mount del código + node_modules)
+  frontend:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
+    environment:
+      NODE_OPTIONS: "--use-system-ca"
+    ports:
+      - "5174:5173"
+    volumes:
+      - ./frontend:/app
+      - node_modules:/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  repobrain_data:
+  repobrain_workspace:
+  node_modules:

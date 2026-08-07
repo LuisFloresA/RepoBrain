@@ -1,0 +1,29 @@
+# Python / backend
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Node / frontend
+node_modules/
+dist/
+
+# Entorno y datos
+.env
+.env.*
+!.env.example
+data/
+workspace/
+demo/index/
+
+# SO / editor
+.DS_Store
+Thumbs.db
+*.log
+tsconfig.tsbuildinfo
+*.tsbuildinfo

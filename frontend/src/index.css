@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1rem;
+  max-width: 420px;
+}
+
+dt {
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 9999px;
+  padding: 0.1rem 0.7rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.badge.ok {
+  background: #166534;
+  color: #ecfdf5;
+}
+
+.badge.degraded {
+  background: #92400e;
+  color: #fffbeb;
+}
+
+.error {
+  color: #dc2626;
+}
