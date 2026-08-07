@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from app.api import health, repos
 from app.core.config import settings
+from app.core.rate_limit import RateLimitMiddleware
 from app.core.security import SecurityHeadersMiddleware
 from app.db.session import init_db
 from workers.tasks import seed_demo_repo
@@ -38,6 +39,8 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(SecurityHeadersMiddleware)
+    # El rate limit se registra al final => queda en la capa más externa.
+    app.add_middleware(RateLimitMiddleware)
 
     app.include_router(health.router)
     app.include_router(repos.router, prefix=settings.api_prefix)

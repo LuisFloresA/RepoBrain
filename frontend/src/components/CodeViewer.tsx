@@ -1,6 +1,7 @@
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { useEffect, useRef } from "react";
 import type { CodeFile } from "../api/types";
+import { maskSecrets } from "../lib/mask";
 import { monaco } from "../lib/monaco";
 
 interface CodeViewerProps {
@@ -56,7 +57,7 @@ export function CodeViewer({ file, highlightLine }: CodeViewerProps) {
       <Editor
         height="58vh"
         language={file.language ?? undefined}
-        value={file.content}
+        value={maskSecrets(file.content)}
         theme="vs-dark"
         onMount={handleMount}
         options={{

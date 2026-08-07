@@ -66,3 +66,29 @@ def test_resolve_within_blocks_traversal(tmp_path) -> None:
         resolve_within(root, "a/../../outside")
     resolved = resolve_within(root, "sub/file.py")
     assert resolved == (root / "sub" / "file.py").resolve()
+
+
+def test_rate_limit_exempts_health() -> None:
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    with TestClient(app) as test_client:
+        for _ in range(5):
+            resp = test_client.get("/health")
+            assert resp.status_code == 200
+
+
+def test_rate_limit_blocks_after_threshold(client, env, monkeypatch) -> None:
+    from app.core.config import settings
+    from app.core.rate_limit import reset_rate_limits
+
+    reset_rate_limits()
+    monkeypatch.setattr(settings, "request_rate_limit_per_minute", 3)
+
+    for _ in range(3):
+        assert client.get("/api/repos").status_code == 200
+
+    blocked = client.get("/api/repos")
+    assert blocked.status_code == 429
+    assert "retry-after" in blocked.headers

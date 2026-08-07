@@ -1,0 +1,76 @@
+# API (OpenAPI + ejemplos curl)
+
+El esquema completo se autogenera en `GET /openapi.json` y la UI interactiva en
+`/docs` (Swagger). Prefijo base: `/api` (backend en `:8000` internamente;
+`http://localhost:8002` en el dev compose).
+
+## Health
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/health` | Liveness |
+| GET | `/health/ready` | Readiness (reporta Redis) |
+
+```bash
+curl http://localhost:8002/health
+curl http://localhost:8002/health/ready
+```
+
+## Repositorios
+
+### Crear e indexar
+
+```bash
+curl -X POST http://localhost:8002/api/repos \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://github.com/pallets/flask","name":"flask","source":"url"}'
+```
+
+Respuesta `201`: el `Repo` queda en estado `indexing` (la indexación corre en el
+worker). El demo embebido se crea con `"source":"demo"` sin URL.
+
+### Listar / estado / re-indexar / eliminar
+
+```bash
+curl http://localhost:8002/api/repos
+curl http://localhost:8002/api/repos/<id>/status
+curl -X POST http://localhost:8002/api/repos/<id>/index
+curl -X DELETE http://localhost:8002/api/repos/<id>
+```
+
+## Búsqueda híbrida
+
+```bash
+curl "http://localhost:8002/api/repos/<id>/search?q=dónde%20se%20valida%20el%20jwt&top_k=5"
+```
+
+Devuelve `results[]` con `path`, `start_line`, `end_line`, `snippet`, `score`,
+`bm25_score`, `semantic_score`. Requiere repo en estado `ready` (409 si no).
+
+## Q&A con LLM
+
+```bash
+curl -X POST http://localhost:8002/api/repos/<id>/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question":"¿cómo se hace el soft delete?","top_k":5}'
+```
+
+Respuesta: `answer` (texto), `citations[]` (`path`, `start_line`, `end_line`)
+**validadas contra el checkout real**, `source` (`mock` | `openai-compatible`)
+y `llm` (proveedor:modelo).
+
+## Archivos
+
+```bash
+curl http://localhost:8002/api/repos/<id>/files/app/auth.py
+```
+
+Devuelve `content`, `language` y `line_count`. Las rutas se validan contra el
+workspace (path traversal → 400/404).
+
+## Notas
+
+- Rate limiting por IP en `/api/*` (429 con `Retry-After`; configurable vía
+  `REQUEST_RATE_LIMIT_PER_MINUTE`, `0` = desactivado).
+- Códigos típicos: `201` creado, `400` ruta inválida, `404` no existe,
+  `409` estado no `ready`, `422` validación DTO, `429` rate limit.

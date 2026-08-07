@@ -28,6 +28,12 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(settings, "embedder_backend", "hash")
     monkeypatch.setattr(settings, "embed_batch_size", 16)
 
+    import app.core.rate_limit as rate_limit
+
+    # Rate limit desactivado por defecto en tests (se activa explícitamente)
+    monkeypatch.setattr(settings, "request_rate_limit_per_minute", 0)
+    rate_limit.reset_rate_limits()
+
     import app.vector.embeddings as embeddings
     from app.vector.search_service import search_service
 

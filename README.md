@@ -1,14 +1,19 @@
 # RepoBrain
 
-Búsqueda semántica y Q&A sobre código fuente. Pegas un repositorio, la
-plataforma lo indexa (parseo con `tree-sitter` + *embeddings*) y respondes a
-preguntas en lenguaje natural con respuestas que citan `archivo:línea`.
+[![CI](https://github.com/LuisFloresA/RepoBrain/actions/workflows/ci.yml/badge.svg)](https://github.com/LuisFloresA/RepoBrain/actions/workflows/ci.yml)
 
-Proyecto de portafolio gemelo de TechDebt Radar. Implementación por fases.
+**Grep en lenguaje natural.** Pegas un repositorio, RepoBrain lo indexa
+(`tree-sitter` + *embeddings* + BM25) y respondes a preguntas como
+*"¿dónde se valida el JWT?"* con respuestas que citan `archivo:línea`.
 
-## Estado
+> Proyecto de portafolio, gemelo de TechDebt Radar. Implementado por fases.
 
-- **F0 — Esqueleto:** ✅ completado. Stack levantado con Docker Compose, `/health` y `/health/ready` responden OK.
+## Qué resuelve
+
+`grep` busca cadenas exactas; RepoBrain busca **intención**. "¿cómo se hace el
+soft delete?" no aparece literal en el código, pero sí `def soft_delete(self)`
+— el ranking híbrido lo encuentra y, con el Q&A, te lo explica citando la línea
+exacta. Todo sin API key, sin registro y sin red para el demo embebido.
 
 ## Quickstart
 
@@ -18,34 +23,106 @@ docker compose up --build
 
 - Frontend: http://localhost:5174
 - Backend API: http://localhost:8002
-- Documentación OpenAPI: http://localhost:8002/docs
+- OpenAPI: http://localhost:8002/docs
 
-## Stack
+Al arrancar se crea el **repo de demo embebido** ("Demo · login-api (JWT)").
+Pulsa **"Probar ahora"** y, después, escribe tu propia pregunta en el panel
+"Pregunta al código".
 
-FastAPI · Pydantic v2 · Celery + Redis · tree-sitter · BM25 (`bm25s`) ·
-`all-MiniLM-L6-v2` · SQLite + FAISS · React 19 + TypeScript + Vite · Docker · GH Actions
+### LLM real (opcional)
+
+Sin `LLM_API_KEY` el Q&A usa un **mock anti-bloqueo** (mismo pipeline, sin
+coste). Para un proveedor real:
+
+```bash
+LLM_PROVIDER=deepseek LLM_API_KEY=... docker compose up -d --build
+```
+
+Proveedores soportados: `openai`, `deepseek`, `gemini`, `ollama` (protocolo
+`/chat/completions`).
+
+## Arquitectura
+
+```mermaid
+flowchart TB
+    subgraph Client
+        UI["React 19 (buscador + visor + Q&A)"]
+    end
+    subgraph API["FastAPI"]
+        REPO["/api/repos"]
+        SEARCH["/search (híbrido RRF)"]
+        QA["/ask (LLM + citas verificadas)"]
+    end
+    subgraph Tier["Indexación async"]
+        QUEUE["Celery (Redis)"]
+        WORKER["Worker: tree-sitter + embeddings"]
+        STORE[("SQLite + FAISS")]
+    end
+    UI --> API
+    API --> QUEUE --> WORKER --> STORE
+    API --> SEARCH --> STORE
+    API --> QA --> STORE
+    QA -. opcional .-> LLM["LLM multi-proveedor / mock"]
+```
+
+Detalle y ADRs en [`docs/arquitectura.md`](docs/arquitectura.md).
+
+## Endpoints (resumen)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/repos` | Crear repo (`url` o `source=demo`) y encolar indexación |
+| GET | `/api/repos/{id}/status` | Progreso de indexación |
+| GET | `/api/repos/{id}/search?q=` | Búsqueda híbrida con citas `path:línea` |
+| POST | `/api/repos/{id}/ask` | Q&A con LLM y citas **verificadas** |
+| GET | `/api/repos/{id}/files/{path}` | Contenido de un archivo (visor) |
+
+Toda la API en [`docs/api.md`](docs/api.md).
+
+## Tests
+
+```bash
+# Backend (pytest + coverage ≥85%)
+cd backend
+python -m venv .venv && .\.venv\Scripts\pip install -e ".[dev]"
+.\.venv\Scripts\python -m pytest
+.\.venv\Scripts\python -m ruff check app tests workers
+
+# Frontend (Vitest + RTL + tsc/eslint)
+cd frontend
+npm ci
+npm run lint
+npm run test -- --run
+npm run build
+```
 
 ## Fases
 
 | Fase | Entregable | Estado |
 |------|-----------|--------|
-| F0 | Esqueleto (compose, health, CI) | ✅ |
+| F0 | Esqueleto (compose, health) | ✅ |
 | F1 | Index + búsqueda híbrida + visor | ✅ |
-| F2 | Q&A con LLM y citas validadas | ✅ (mock por defecto, multi-proveedor) |
-| F3 | Pulido y producción (docs, hardening) | Pendiente |
-
-## Documentación
-
-Los documentos fuente de diseño (única fuente de verdad):
-
-- `01-repobrain-busqueda-semantica-codigo.md` — especificación de diseño.
-- `01-repobrain-README.md` — plan de referencia.
+| F2 | Q&A con LLM y citas validadas | ✅ |
+| F3 | Pulido: docs, hardening (rate limit, secretos), CI | ✅ |
+| F3+ | Deploy, Java/C#, indexación incremental | Pendiente |
 
 ## Seguridad
 
-El código de un repositorio **nunca se ejecuta** (solo parseo estático), se
-bloquea SSRF, se protege de *path traversal*, y los contenedores corren como
-usuarios no-root. Detalle en `docs/seguridad.md` (F3).
+El código de un repo **nunca se ejecuta** (solo parseo estático), se bloquea
+**SSRF** (IPs privadas/metadatos al clonar), **path traversal**, **rate
+limiting** por IP en `/api/*`, y los contenedores corren como **usuario
+no-root**. El visor **enmascara secretos** (`sk-…`, `AKIA…`, `password=…`).
+Detalle en [`docs/seguridad.md`](docs/seguridad.md).
+
+## Documentación
+
+- [`docs/arquitectura.md`](docs/arquitectura.md) — componentes y ADRs.
+- [`docs/api.md`](docs/api.md) — endpoints con ejemplos curl.
+- [`docs/demo.md`](docs/demo.md) — guión de demo de 2 minutos.
+- [`docs/seguridad.md`](docs/seguridad.md) — matriz de amenazas.
+- [`docs/write-up-tecnico.md`](docs/write-up-tecnico.md) — write-up del blog.
+- `01-repobrain-busqueda-semantica-codigo.md` — especificación de diseño
+  (fuente de verdad).
 
 ## Licencia
 
