@@ -1,0 +1,49 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { searchRepo } from "../src/api/client";
+
+describe("api client", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("devuelve resultados de búsqueda", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ query: "jwt", repo_id: "r1", top_k: 10, results: [] }),
+      }),
+    );
+    const res = await searchRepo("r1", "jwt", 10);
+    expect(res.repo_id).toBe("r1");
+    const url = String(vi.mocked(fetch).mock.calls[0][0]);
+    expect(url).toContain("/api/repos/r1/search?q=jwt&top_k=10");
+  });
+
+  it("lanza error con el detalle del backend", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ detail: "Repo en estado: indexing" }),
+      }),
+    );
+    await expect(searchRepo("r1", "jwt")).rejects.toThrow("Repo en estado: indexing");
+  });
+
+  it("codifica el path del archivo en la URL", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ path: "app/auth.py", language: "python", content: "", line_count: 0 }),
+      }),
+    );
+    const { getFile } = await import("../src/api/client");
+    await getFile("r1", "app/auth.py");
+    expect(String(vi.mocked(fetch).mock.calls[0][0])).toBe(
+      "/api/repos/r1/files/app/auth.py",
+    );
+  });
+});

@@ -17,4 +17,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 2500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          monaco: ["monaco-editor", "@monaco-editor/react"],
+          react: ["react", "react-dom"],
+        },
+      },
+    },
+  },
 });

@@ -1,14 +1,58 @@
-export interface HealthStatus {
-  status: "ok" | "degraded";
-  service: string;
-  environment: string;
-  dependencies?: Record<string, string>;
+import type {
+  CodeFile,
+  HealthStatus,
+  Repo,
+  SearchResponse,
+} from "./types";
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const resp = await fetch(path, init);
+  if (!resp.ok) {
+    let detail = `Error ${resp.status}`;
+    try {
+      const body = (await resp.json()) as { detail?: string };
+      if (body.detail) detail = body.detail;
+    } catch {
+      /* respuesta no JSON */
+    }
+    throw new Error(detail);
+  }
+  return (await resp.json()) as T;
 }
 
 export async function fetchHealth(endpoint = "/health"): Promise<HealthStatus> {
-  const resp = await fetch(endpoint);
-  if (!resp.ok) {
-    throw new Error(`Health check ${endpoint} failed: ${resp.status}`);
-  }
-  return (await resp.json()) as HealthStatus;
+  return request<HealthStatus>(endpoint);
+}
+
+export async function getRepos(): Promise<Repo[]> {
+  return request<Repo[]>("/api/repos");
+}
+
+export async function createRepo(
+  payload: { url?: string; name?: string; source: string },
+): Promise<Repo> {
+  return request<Repo>("/api/repos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getRepoStatus(id: string): Promise<Repo> {
+  return request<Repo>(`/api/repos/${id}/status`);
+}
+
+export async function searchRepo(
+  id: string,
+  q: string,
+  topK = 10,
+): Promise<SearchResponse> {
+  const params = new URLSearchParams({ q, top_k: String(topK) });
+  return request<SearchResponse>(`/api/repos/${id}/search?${params}`);
+}
+
+export async function getFile(id: string, path: string): Promise<CodeFile> {
+  return request<CodeFile>(
+    `/api/repos/${id}/files/${path.split("/").map(encodeURIComponent).join("/")}`,
+  );
 }

@@ -8,7 +8,10 @@ services:
     image: repobrain-backend:prod
     environment:
       ENVIRONMENT: production
-    # Sin bind mounts: imagen empacada
+      DEMO_DATA_DIR: /demo/data
+    # Sin bind mounts: imagen empacada; solo el repo demo embebido
+    volumes:
+      - ./demo:/demo:ro
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -17,6 +20,9 @@ services:
     image: repobrain-backend:prod
     environment:
       ENVIRONMENT: production
+      DEMO_DATA_DIR: /demo/data
+    volumes:
+      - ./demo:/demo:ro
     restart: unless-stopped
 
   frontend:

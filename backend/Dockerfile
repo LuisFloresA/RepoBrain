@@ -20,7 +20,10 @@ RUN pip install --upgrade pip \
 # ---------- Stage 2: runtime ----------
 FROM python:3.14-slim AS runtime
 
-RUN groupadd --gid 10001 appuser \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 appuser \
     && useradd --uid 10001 --gid 10001 --no-create-home appuser
 
 WORKDIR /app
@@ -32,11 +35,15 @@ COPY --from=deps /app/app ./app
 COPY --from=deps /app/workers ./workers
 
 # Directorios de datos/workspace con permisos del usuario no-raíz
-RUN mkdir -p /app/data /app/workspace \
+RUN mkdir -p /app/data /app/workspace /app/cache \
     && chown -R appuser:appuser /app
 
 ENV PYTHONPATH=/app \
-    ENVIRONMENT=development
+    ENVIRONMENT=development \
+    HF_HOME=/app/cache/huggingface \
+    TRANSFORMERS_CACHE=/app/cache/huggingface \
+    SENTENCE_TRANSFORMERS_HOME=/app/cache/sentence_transformers \
+    TOKENIZERS_PARALLELISM=false
 
 USER appuser
 

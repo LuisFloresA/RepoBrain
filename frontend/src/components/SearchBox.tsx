@@ -1,0 +1,52 @@
+interface SearchBoxProps {
+  query: string;
+  onQueryChange: (value: string) => void;
+  onSubmit: () => void;
+  onDemo: () => void;
+  disabled?: boolean;
+  demoLabel?: string;
+}
+
+export function SearchBox({
+  query,
+  onQueryChange,
+  onSubmit,
+  onDemo,
+  disabled,
+  demoLabel = "Probar ahora",
+}: SearchBoxProps) {
+  return (
+    <form
+      className="search-box"
+      role="search"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+    >
+      <label className="visually-hidden" htmlFor="search-input">
+        Búsqueda semántica
+      </label>
+      <input
+        id="search-input"
+        type="search"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        placeholder="Pregunta en lenguaje natural… p. ej. ¿dónde se valida el JWT?"
+        minLength={2}
+        disabled={disabled}
+      />
+      <button type="submit" disabled={disabled || query.trim().length < 2}>
+        Buscar
+      </button>
+      <button
+        type="button"
+        className="demo"
+        onClick={onDemo}
+        data-testid="demo-button"
+      >
+        {demoLabel}
+      </button>
+    </form>
+  );
+}

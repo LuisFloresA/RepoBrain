@@ -22,12 +22,14 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-    # Puerto host 8001 para evitar colisión con otros contenedores (8000)
+      DEMO_DATA_DIR: /demo/data
+    # Puerto host en 8002 para evitar conflicto con otros contenedores
     ports:
       - "8002:8000"
     volumes:
       - ./backend/app:/app/app:ro
       - ./backend/workers:/app/workers:ro
+      - ./demo:/demo:ro
       - repobrain_data:/app/data
       - repobrain_workspace:/app/workspace
     depends_on:
@@ -60,9 +62,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DEMO_DATA_DIR: /demo/data
     volumes:
       - ./backend/app:/app/app:ro
       - ./backend/workers:/app/workers:ro
+      - ./demo:/demo:ro
       - repobrain_data:/app/data
       - repobrain_workspace:/app/workspace
     depends_on:

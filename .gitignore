@@ -20,6 +20,7 @@ dist/
 data/
 workspace/
 demo/index/
+!demo/data/
 
 # SO / editor
 .DS_Store
