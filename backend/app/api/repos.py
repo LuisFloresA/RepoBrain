@@ -8,12 +8,21 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.schemas import FileOut, MessageOut, RepoCreate, RepoOut, SearchResponse
+from app.api.schemas import (
+    AskRequest,
+    AskResponse,
+    FileOut,
+    MessageOut,
+    RepoCreate,
+    RepoOut,
+    SearchResponse,
+)
 from app.core.config import settings
 from app.core.security import resolve_within
 from app.db.models import Repo
 from app.db.session import get_session
 from app.indexing.parser import language_for_path
+from app.vector.qa_service import qa_service
 from app.vector.search_service import search_service
 from workers.celery_app import celery_app
 from workers.tasks import index_repo
@@ -111,6 +120,26 @@ def search(
             }
             for r in results
         ],
+    )
+
+
+@router.post("/{repo_id}/ask", response_model=AskResponse)
+def ask(
+    repo_id: str,
+    payload: AskRequest,
+    session: Session = Depends(get_session),
+) -> AskResponse:
+    repo = _repo_or_404(session, repo_id)
+    if repo.status != "ready":
+        raise HTTPException(status_code=409, detail=f"Repo en estado: {repo.status}")
+
+    result = qa_service.answer(session, repo, payload.question, top_k=payload.top_k)
+    return AskResponse(
+        question=result["question"],
+        answer=result["answer"],
+        citations=result["citations"],
+        llm=result["llm"],
+        source=result["source"],
     )
 
 

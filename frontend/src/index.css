@@ -380,3 +380,105 @@ body {
 .rb-line-gutter {
   border-left: 3px solid #58a6ff;
 }
+
+/* Panel Q&A */
+.ask-panel {
+  margin-top: 1rem;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.ask-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: #e6edf3;
+}
+
+.ask-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.ask-form textarea {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  color: #e6edf3;
+  font: inherit;
+  resize: vertical;
+}
+
+.ask-form textarea:disabled {
+  opacity: 0.5;
+}
+
+.ask-form button {
+  padding: 0.6rem 1.1rem;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #1f6feb;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ask-form button:hover:not(:disabled) {
+  background: #388bfd;
+}
+
+.ask-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ask-answer {
+  margin-top: 0.75rem;
+  border-top: 1px solid #21262d;
+  padding-top: 0.75rem;
+}
+
+.ask-source {
+  font-size: 0.75rem;
+  color: #8b949e;
+  margin: 0 0 0.5rem;
+}
+
+.answer-text {
+  color: #e6edf3;
+  white-space: pre-wrap;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.answer-text p {
+  margin: 0 0 0.4rem;
+}
+
+.citation-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+
+.citation-link {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.55rem;
+  background: #161b22;
+  border: 1px solid #1f6feb;
+  border-radius: 6px;
+  color: #58a6ff;
+  cursor: pointer;
+}
+
+.citation-link:hover {
+  background: #1f6feb22;
+}

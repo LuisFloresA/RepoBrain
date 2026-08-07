@@ -30,8 +30,8 @@ FastAPI · Pydantic v2 · Celery + Redis · tree-sitter · BM25 (`bm25s`) ·
 | Fase | Entregable | Estado |
 |------|-----------|--------|
 | F0 | Esqueleto (compose, health, CI) | ✅ |
-| F1 | Index + búsqueda híbrida + visor | Pendiente |
-| F2 | Q&A con LLM y citas validadas | Pendiente |
+| F1 | Index + búsqueda híbrida + visor | ✅ |
+| F2 | Q&A con LLM y citas validadas | ✅ (mock por defecto, multi-proveedor) |
 | F3 | Pulido y producción (docs, hardening) | Pendiente |
 
 ## Documentación

@@ -46,6 +46,25 @@ class SearchResponse(BaseModel):
     results: list[SearchResult]
 
 
+class AskRequest(BaseModel):
+    question: str = Field(min_length=3, max_length=500)
+    top_k: int = Field(default=5, ge=1, le=10)
+
+
+class Citation(BaseModel):
+    path: str
+    start_line: int
+    end_line: int
+
+
+class AskResponse(BaseModel):
+    question: str
+    answer: str
+    citations: list[Citation]
+    llm: str
+    source: str  # mock | openai-compatible | none
+
+
 class FileOut(BaseModel):
     path: str
     language: str | None = None

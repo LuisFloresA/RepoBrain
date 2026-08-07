@@ -118,3 +118,45 @@ def test_search_short_query_validation(client, env) -> None:
         client.get(f"/api/repos/{repo['id']}/search", params={"q": "a"}).status_code
         == 422
     )
+
+
+def test_ask_returns_answer_with_verified_citations(client, env) -> None:
+    repo = _create_demo_repo(client, env["demo"])
+
+    resp = client.post(
+        f"/api/repos/{repo['id']}/ask",
+        json={"question": "¿dónde se valida el jwt?"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["source"] == "mock"  # sin API key => mock anti-bloqueo
+    assert body["answer"]
+    assert body["citations"], "Debe devolver citas verificadas"
+    top = body["citations"][0]
+    assert top["path"] == "app/auth.py"
+    assert 1 <= top["start_line"] <= top["end_line"]
+
+
+def test_ask_requires_ready_repo(client, env) -> None:
+    import app.db.session as db_session
+    from app.db.models import Repo
+
+    session = db_session.SessionLocal()
+    try:
+        repo = Repo(name="en-proceso", source="demo", status="indexing")
+        session.add(repo)
+        session.commit()
+        repo_id = repo.id
+    finally:
+        session.close()
+
+    resp = client.post(
+        f"/api/repos/{repo_id}/ask", json={"question": "¿dónde está la BD?"}
+    )
+    assert resp.status_code == 409
+
+
+def test_ask_short_question_validation(client, env) -> None:
+    repo = _create_demo_repo(client, env["demo"])
+    resp = client.post(f"/api/repos/{repo['id']}/ask", json={"question": "a"})
+    assert resp.status_code == 422

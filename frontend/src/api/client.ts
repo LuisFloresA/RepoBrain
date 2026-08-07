@@ -1,4 +1,5 @@
 import type {
+  AskResponse,
   CodeFile,
   HealthStatus,
   Repo,
@@ -55,4 +56,16 @@ export async function getFile(id: string, path: string): Promise<CodeFile> {
   return request<CodeFile>(
     `/api/repos/${id}/files/${path.split("/").map(encodeURIComponent).join("/")}`,
   );
+}
+
+export async function askQuestion(
+  id: string,
+  question: string,
+  topK = 5,
+): Promise<AskResponse> {
+  return request<AskResponse>(`/api/repos/${id}/ask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, top_k: topK }),
+  });
 }

@@ -17,6 +17,7 @@ vi.mock("../src/api/client", () => ({
   getRepoStatus: vi.fn(),
   getFile: vi.fn(),
   searchRepo: vi.fn(),
+  askQuestion: vi.fn(),
 }));
 
 vi.mock("../src/components/CodeViewer", () => ({

@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     default_top_k: int = 10
     hybrid_weights: tuple[float, float] = (0.5, 0.5)  # (bm25, semántico)
 
+    # Q&A con LLM (F2): mock | openai | deepseek | gemini | ollama
+    llm_provider: str = "mock"
+    llm_api_key: str = ""
+    llm_model: str = ""
+    llm_base_url: str = ""
+    llm_timeout_seconds: int = 60
+    qa_top_k: int = 5
+
     @property
     def is_debug(self) -> bool:
         return self.environment == "development"

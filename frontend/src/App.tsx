@@ -7,6 +7,7 @@ import {
   searchRepo,
 } from "./api/client";
 import type { CodeFile, Repo, SearchResult } from "./api/types";
+import { AskPanel } from "./components/AskPanel";
 import { CodeViewer } from "./components/CodeViewer";
 import { ProgressBar } from "./components/ProgressBar";
 import { RepoPicker } from "./components/RepoPicker";
@@ -145,6 +146,17 @@ export function App() {
     }
   };
 
+  const openFileAt = async (path: string, line: number) => {
+    if (!activeRepoId) return;
+    setHighlightLine(line);
+    try {
+      const file = await getFile(activeRepoId, path);
+      setSelectedFile(file);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const handleAddRepo = async () => {
     if (!addUrl.trim()) return;
     setError(null);
@@ -246,6 +258,13 @@ export function App() {
             )}
           </section>
         </div>
+
+        <AskPanel
+          key={activeRepoId ?? "no-repo"}
+          repoId={activeRepoId ?? ""}
+          onOpenFile={(path, line) => void openFileAt(path, line)}
+          disabled={!activeRepo || activeRepo.status !== "ready"}
+        />
       </main>
     </div>
   );

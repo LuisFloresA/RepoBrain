@@ -38,6 +38,20 @@ export interface CodeFile {
   line_count: number;
 }
 
+export interface Citation {
+  path: string;
+  start_line: number;
+  end_line: number;
+}
+
+export interface AskResponse {
+  question: string;
+  answer: string;
+  citations: Citation[];
+  llm: string;
+  source: "mock" | "openai-compatible" | "none";
+}
+
 export interface HealthStatus {
   status: "ok" | "degraded";
   service: string;
