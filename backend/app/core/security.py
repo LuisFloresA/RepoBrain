@@ -10,6 +10,7 @@ Reglas de diseño de RepoBrain:
 from __future__ import annotations
 
 import ipaddress
+import shlex
 import socket
 from pathlib import Path
 from urllib.parse import urlparse
@@ -75,6 +76,79 @@ BLOCKED_NETWORKS: list[tuple[str, int]] = [
 ]
 
 ALLOWED_SCHEMES = {"http", "https"}
+
+# Hosts a los que se permite clonar vía SSH (repos privados con deploy key).
+# Cualquier otro host SSH queda bloqueado: no hay SSH a redes arbitrarias.
+ALLOWED_SSH_HOSTS = {"github.com", "gitlab.com", "bitbucket.org"}
+
+
+def _ssh_target(url: str) -> tuple[str, str] | None:
+    """Devuelve `(host_part, path)` si `url` es SSH a un host permitido.
+
+    Acepta los formatos `ssh://git@host:port/path` y `git@host:path`.
+    Devuelve None para todo lo demás (no se trata de un clone SSH válido).
+    """
+    u = url.strip()
+    if "@" not in u or (":" not in u and not u.startswith("ssh://")):
+        return None
+
+    if u.startswith("ssh://"):
+        parsed = urlparse(u)
+        if parsed.scheme != "ssh" or parsed.hostname not in ALLOWED_SSH_HOSTS:
+            return None
+        path = (parsed.path or "").lstrip("/")
+        if not path:
+            return None
+        host_part = f"{parsed.username or 'git'}@{parsed.hostname}"
+        if parsed.port is not None:
+            host_part += f":{parsed.port}"
+        return host_part, path
+
+    if "://" in u:
+        return None
+    host_part, colon, path = u.partition(":")
+    if not colon or not path:
+        return None
+    host = host_part.split("@")[-1].split(":")[0]
+    if host not in ALLOWED_SSH_HOSTS:
+        return None
+    user = host_part.split("@")[0] if "@" in host_part else "git"
+    return f"{user}@{host}", path
+
+
+def validate_clone_url(url: str) -> tuple[str, bool]:
+    """Valida una URL de repositorio para clonar y devuelve `(url, es_ssh)`.
+
+    - http(s): comprobación SSRF habitual (IPs privadas/metadatos bloqueadas).
+    - SSH a github.com/gitlab.com/bitbucket.org: permite repos privados con
+      deploy key (GIT_SSH_KEY). Normaliza el formato scp-like a `ssh://`.
+    """
+    target = _ssh_target(url)
+    if target is not None:
+        host_part, path = target
+        return f"ssh://{host_part}/{path}", True
+    validate_public_url(url)
+    return url, False
+
+
+def git_ssh_env(key_path: str) -> dict[str, str] | None:
+    """Construye `GIT_SSH_COMMAND` para usar `key_path` como deploy key.
+
+    Devuelve None si la clave no existe o no es un archivo (entonces no se
+    fuerza SSH y la operación git fallará con su mensaje natural).
+    `accept-new` evita requerir known_hosts previos sin desactivar la verificación.
+    """
+    path = Path(key_path).expanduser()
+    if not path.is_file():
+        return None
+    quoted = shlex.quote(str(path.resolve()))
+    return {
+        "GIT_SSH_COMMAND": (
+            f"ssh -i {quoted} -o IdentitiesOnly=yes "
+            "-o StrictHostKeyChecking=accept-new "
+            "-o UserKnownHostsFile=/dev/null"
+        )
+    }
 
 
 def is_public_ip(ip: str) -> bool:

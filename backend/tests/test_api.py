@@ -93,7 +93,7 @@ def test_create_repo_blocks_private_url(client, env, monkeypatch) -> None:
     def bad_url(_url):
         raise ValueError("La URL resuelve a una IP privada (SSRF)")
 
-    monkeypatch.setattr(cloner, "validate_public_url", bad_url)
+    monkeypatch.setattr(cloner, "validate_clone_url", bad_url)
     resp = client.post(
         "/api/repos",
         json={"url": "https://internal.corp/repo.git", "source": "url"},

@@ -1,40 +1,111 @@
-# Override de producción: sobreescribe el stack de dev del docker-compose.yml.
-# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-
+# Producción de RepoBrain (OCI / VM). Stack autocontenido detrás de
+# Cloudflare Quick Tunnel: sin puertos expuestos al host (no choca con
+# otros proyectos Docker de la VM).
+#
+# Uso en la VM:
+#   git clone https://github.com/LuisFloresA/RepoBrain.git
+#   cd RepoBrain
+#   cp .env.prod.example .env.prod   # opcional: LLM + GIT_SSH_KEY
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml logs -f tunnel   # URL https://XXX.trycloudflare.com
+#
+# Persistencia sobre el block volume OCI montado en /opt/repobrain.
 name: repobrain-prod
 
+x-backend-env: &backend-env
+  ENVIRONMENT: production
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+  DEMO_DATA_DIR: /app/demo/data
+  GIT_SSH_KEY: /secrets/git_deploy_key
+
+x-backend-volumes: &backend-volumes
+  # Block volume OCI montado en /opt/repobrain: datos + checkouts + caché del modelo
+  - /opt/repobrain/data:/app/data
+  - /opt/repobrain/workspace:/app/workspace
+  - /opt/repobrain/cache:/app/cache
+  # Deploy key SSH (repos privados). Colocar el archivo en el host:
+  #   mkdir -p /opt/repobrain/secrets && cp ~/.ssh/repo_deploy_key /opt/repobrain/secrets/git_deploy_key
+  #   chmod 600 /opt/repobrain/secrets/git_deploy_key
+  - /opt/repobrain/secrets:/secrets:ro
+
 services:
-  backend:
-    image: repobrain-backend:prod
-    environment:
-      ENVIRONMENT: production
-      DEMO_DATA_DIR: /demo/data
-    # Sin bind mounts: imagen empacada; solo el repo demo embebido
-    volumes:
-      - ./demo:/demo:ro
-    ports:
-      - "8000:8000"
+  redis:
+    image: redis:7-alpine
     restart: unless-stopped
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.prod
+    image: repobrain-backend:prod
+    restart: unless-stopped
+    environment: *backend-env
+    env_file:
+      - path: .env.prod
+        required: false
+    expose:
+      - "8000"
+    volumes: *backend-volumes
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   worker:
     image: repobrain-backend:prod
-    environment:
-      ENVIRONMENT: production
-      DEMO_DATA_DIR: /demo/data
-    volumes:
-      - ./demo:/demo:ro
     restart: unless-stopped
+    command:
+      ["celery", "-A", "workers.celery_app:celery_app", "worker", "--loglevel=info"]
+    environment: *backend-env
+    env_file:
+      - path: .env.prod
+        required: false
+    volumes: *backend-volumes
+    depends_on:
+      redis:
+        condition: service_healthy
 
   frontend:
-    # En prod se sirve el estático con nginx (no-root) en lugar del dev server
     build:
       context: ./frontend
     image: repobrain-frontend:prod
-    ports:
-      - "80:8080"
+    restart: unless-stopped
+    expose:
+      - "8080"
     depends_on:
       - backend
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
-  redis:
+  # Túnel saliente a Cloudflare: expone la UI en una URL https://XXX.trycloudflare.com
+  # sin abrir puertos en la VM. La URL aparece en los logs del servicio `tunnel`.
+  tunnel:
+    image: cloudflare/cloudflared:latest
     restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "--url", "http://frontend:8080"]
+    depends_on:
+      frontend:
+        condition: service_healthy

@@ -78,7 +78,7 @@ def test_clone_public_repo_blocks_internal(monkeypatch) -> None:
 
     import app.indexing.repo_cloner as cloner
 
-    monkeypatch.setattr(cloner, "validate_public_url", bad_url)
+    monkeypatch.setattr(cloner, "validate_clone_url", bad_url)
     with pytest.raises(ValueError, match="SSRF"):
         clone_public_repo("https://internal/repo.git", "abc123")
 
@@ -93,9 +93,9 @@ def test_clone_public_repo_uses_safe_argv(monkeypatch, env) -> None:
         stderr = ""
 
     def fake_validate(_url):
-        return None
+        return _url, False
 
-    def fake_run(cmd, capture_output, text, timeout, check):
+    def fake_run(cmd, capture_output, text, timeout, check, env=None):
         captured.append(list(cmd))
         # Simula el checkout creado
         dest = cmd[-1]
@@ -104,7 +104,7 @@ def test_clone_public_repo_uses_safe_argv(monkeypatch, env) -> None:
         Path(dest).mkdir(parents=True, exist_ok=True)
         return FakeProc()
 
-    monkeypatch.setattr(cloner, "validate_public_url", fake_validate)
+    monkeypatch.setattr(cloner, "validate_clone_url", fake_validate)
     monkeypatch.setattr(cloner.subprocess, "run", fake_run)
 
     checkout = clone_public_repo("https://github.com/example/repo.git", "repo123")
@@ -129,16 +129,16 @@ def test_clone_public_repo_with_branch(monkeypatch, env) -> None:
         stderr = ""
 
     def fake_validate(_url):
-        return None
+        return _url, False
 
-    def fake_run(cmd, capture_output, text, timeout, check):
+    def fake_run(cmd, capture_output, text, timeout, check, env=None):
         captured.append(list(cmd))
         from pathlib import Path
 
         Path(cmd[-1]).mkdir(parents=True, exist_ok=True)
         return FakeProc()
 
-    monkeypatch.setattr(cloner, "validate_public_url", fake_validate)
+    monkeypatch.setattr(cloner, "validate_clone_url", fake_validate)
     monkeypatch.setattr(cloner.subprocess, "run", fake_run)
 
     checkout = clone_public_repo(
@@ -148,3 +148,47 @@ def test_clone_public_repo_with_branch(monkeypatch, env) -> None:
     assert "--branch" in cmd
     assert cmd[cmd.index("--branch") + 1] == "develop"
     assert checkout.endswith("repo456")
+
+
+def test_clone_public_repo_ssh_requires_key(monkeypatch, env) -> None:
+    import app.core.config as config
+
+    monkeypatch.setattr(config.settings, "git_ssh_key", "")
+    with pytest.raises(ValueError, match="GIT_SSH_KEY"):
+        clone_public_repo("git@github.com:acme/privado.git", "repo789")
+
+
+def test_clone_public_repo_ssh_sets_git_ssh_command(monkeypatch, env, tmp_path) -> None:
+    from pathlib import Path
+
+    import app.core.config as config
+
+    key = tmp_path / "deploy_key"
+    key.write_text("clave-privada-deploy\n")
+    monkeypatch.setattr(config.settings, "git_ssh_key", str(key))
+
+    import app.indexing.repo_cloner as cloner
+
+    captured_cmds: list[list[str]] = []
+    captured_envs: list[dict] = []
+
+    class FakeProc:
+        returncode = 0
+        stderr = ""
+
+    def fake_run(cmd, capture_output, text, timeout, check, env=None):
+        captured_cmds.append(list(cmd))
+        captured_envs.append(dict(env or {}))
+        Path(cmd[-1]).mkdir(parents=True, exist_ok=True)
+        return FakeProc()
+
+    monkeypatch.setattr(cloner.subprocess, "run", fake_run)
+
+    clone_public_repo("git@github.com:acme/privado.git", "repo555")
+    cmd = captured_cmds[0]
+    assert cmd[0] == "git"
+    assert cmd[cmd.index("--") + 1] == "ssh://git@github.com/acme/privado.git"
+    ssh_cmd = captured_envs[0]["GIT_SSH_COMMAND"]
+    assert "ssh -i" in ssh_cmd
+    assert "StrictHostKeyChecking=accept-new" in ssh_cmd
+    assert str(key) in ssh_cmd

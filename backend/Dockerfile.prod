@@ -1,0 +1,68 @@
+# Backend de RepoBrain (producción, OCI/ARM64).
+# Igual approach multi-stage que backend/Dockerfile pero:
+#  - base python:3.13-slim (wheels aarch64 garantizados para torch/faiss/gramáticas)
+#  - demo embebida dentro de la imagen (sin bind mount del host)
+#  - openssh-client para repos privados con deploy key
+# Contexto de build: raíz del repo (docker-compose.prod.yml).
+
+# ---------- Stage 1: dependencias ----------
+FROM python:3.13-slim AS deps
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Capa cacheable: las dependencias externas (torch, gramáticas, etc.)
+# se instalan UNA sola vez.
+COPY backend/requirements-runtime.txt ./
+RUN pip install --upgrade pip \
+    && pip install -r requirements-runtime.txt
+
+# Código instalado SIN re-resolver dependencias externas (--no-deps).
+COPY backend/pyproject.toml ./
+COPY backend/app ./app
+COPY backend/workers ./workers
+
+RUN pip install --no-deps .
+
+# ---------- Demo embebida (capa cacheable) ----------
+COPY demo/data ./demo/data
+
+# ---------- Stage 2: runtime ----------
+FROM python:3.13-slim AS runtime
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git openssh-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 appuser \
+    && useradd --uid 10001 --gid 10001 --no-create-home appuser
+
+WORKDIR /app
+
+# Entorno instalado en el stage de deps
+COPY --from=deps /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
+COPY --from=deps /app/app ./app
+COPY --from=deps /app/workers ./workers
+COPY --from=deps /app/demo ./demo
+
+# Directorios de datos/workspace/caché del modelo con permisos del usuario no-raíz
+RUN mkdir -p /app/data /app/workspace /app/cache \
+    && chown -R appuser:appuser /app
+
+ENV PYTHONPATH=/app \
+    ENVIRONMENT=production \
+    HOME=/app \
+    HF_HOME=/app/cache/huggingface \
+    TRANSFORMERS_CACHE=/app/cache/huggingface \
+    SENTENCE_TRANSFORMERS_HOME=/app/cache/sentence_transformers \
+    TOKENIZERS_PARALLELISM=false \
+    DEMO_DATA_DIR=/app/demo/data
+
+USER appuser
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

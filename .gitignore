@@ -17,6 +17,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 data/
 workspace/
 demo/index/

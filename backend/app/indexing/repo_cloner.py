@@ -1,6 +1,7 @@
-"""Clonado seguro de repositorios públicos.
+"""Clonado seguro de repositorios.
 
-- Solo URLs http(s) públicas (SSRF bloqueado: IPs privadas/metadatos).
+- http(s) públicos: SSRF bloqueado (IPs privadas/metadatos). SSH solo a
+  github.com/gitlab.com/bitbucket.org (repos privados con deploy key).
 - `git clone --depth 1 --no-hardlinks --single-branch`, sin shell.
 - El destino se resuelve SIEMPRE dentro del workspace (path traversal).
 - El código clonado NUNCA se ejecuta: solo se indexa estáticamente.
@@ -8,11 +9,12 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
 from app.core.config import settings
-from app.core.security import resolve_within, validate_public_url
+from app.core.security import git_ssh_env, resolve_within, validate_clone_url
 
 
 def _clone_command(url: str, dest: str, branch: str | None) -> list[str]:
@@ -34,8 +36,17 @@ def clone_public_repo(url: str, repo_id: str, branch: str | None = None) -> str:
 
     Si `branch` se omite, git clona la rama por defecto remota. Con `branch`
     se usa `--single-branch --branch <branch>` (solo esa rama, `--depth 1`).
+    Las URLs SSH (hosts permitidos) requieren una deploy key en GIT_SSH_KEY.
     """
-    validate_public_url(url)
+    url, is_ssh = validate_clone_url(url)
+    env = None
+    if is_ssh:
+        env = git_ssh_env(settings.git_ssh_key)
+        if env is None:
+            raise ValueError(
+                "Repos SSH requieren GIT_SSH_KEY con la ruta de la deploy key"
+            )
+        env = {**os.environ, **env}
 
     base = Path(settings.workspace_root).resolve()
     dest = resolve_within(base, repo_id)
@@ -52,6 +63,7 @@ def clone_public_repo(url: str, repo_id: str, branch: str | None = None) -> str:
             text=True,
             timeout=settings.git_clone_timeout_seconds,
             check=False,
+            env=env,
         )
     except subprocess.TimeoutExpired as exc:
         raise ValueError("El clonado excedió el tiempo permitido") from exc

@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RepoCreate(BaseModel):
-    url: HttpUrl | None = None
+    url: str | None = Field(default=None, max_length=2048)
     name: str | None = Field(default=None, max_length=255)
     branch: str | None = Field(default=None, max_length=255)
     source: str = Field(default="url", pattern="^(url|demo|upload)$")

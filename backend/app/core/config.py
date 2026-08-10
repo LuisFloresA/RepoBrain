@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     max_repo_files: int = 5000
     max_file_bytes: int = 2 * 1024 * 1024  # 2 MB por archivo
     git_clone_timeout_seconds: int = 60
+    # Ruta a la deploy key SSH para repos privados (github/gitlab/bitbucket).
+    # Vacía => solo repos públicos vía HTTPS. No se ejecuta nada del repo.
+    git_ssh_key: str = ""
 
     # Indexación incremental (git diff). Por encima de este umbral se hace
     # una re-indexación completa en lugar de re-indexar solo los cambiados.

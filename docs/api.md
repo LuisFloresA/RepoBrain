@@ -39,6 +39,11 @@ curl -X POST http://localhost:8002/api/repos \
   -d '{"url":"https://github.com/pallets/flask","branch":"1.1.x","name":"flask-1.1","source":"url"}'
 ```
 
+**Repos privados (deploy key)**: `url` admite formato SSH hacia
+`github.com`/`gitlab.com`/`bitbucket.org` (`git@github.com:owner/repo.git` o
+`ssh://git@host/owner/repo.git`). Requiere `GIT_SSH_KEY` (ruta de la deploy
+key) en el worker. Cualquier otro host SSH queda bloqueado.
+
 ### Listar / estado / re-indexar / eliminar
 
 ```bash

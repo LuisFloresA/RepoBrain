@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.security import is_public_ip, resolve_within, validate_public_url
+from app.core.security import (
+    git_ssh_env,
+    is_public_ip,
+    resolve_within,
+    validate_clone_url,
+    validate_public_url,
+)
 
 
 def test_is_public_ip() -> None:
@@ -66,6 +72,60 @@ def test_resolve_within_blocks_traversal(tmp_path) -> None:
         resolve_within(root, "a/../../outside")
     resolved = resolve_within(root, "sub/file.py")
     assert resolved == (root / "sub" / "file.py").resolve()
+
+
+def test_validate_clone_url_ssh_normalizes_github() -> None:
+    url, is_ssh = validate_clone_url("git@github.com:acme/privado.git")
+    assert is_ssh is True
+    assert url == "ssh://git@github.com/acme/privado.git"
+
+
+def test_validate_clone_url_ssh_scheme_form() -> None:
+    url, is_ssh = validate_clone_url("ssh://git@gitlab.com/team/priv.git")
+    assert is_ssh is True
+    assert url == "ssh://git@gitlab.com/team/priv.git"
+
+
+def test_validate_clone_url_rejects_private_ssh_host(monkeypatch) -> None:
+    with pytest.raises(ValueError, match="http"):
+        validate_clone_url("git@172.16.0.9:intranet/repo.git")
+
+
+def test_validate_clone_url_https_still_ssrf_checked(monkeypatch) -> None:
+    import app.core.security as security
+
+    def fake_getaddrinfo(host, port):
+        if host == "private.example":
+            return [(0, 0, 0, 0, ("10.0.0.5", port))]
+        return [(0, 0, 0, 0, ("93.184.216.34", port))]
+
+    monkeypatch.setattr(security.socket, "getaddrinfo", fake_getaddrinfo)
+    with pytest.raises(ValueError, match="SSRF"):
+        validate_clone_url("https://private.example/repo.git")
+    url, is_ssh = validate_clone_url("https://github.com/public/repo.git")
+    assert is_ssh is False
+    assert url == "https://github.com/public/repo.git"
+
+
+def test_validate_clone_url_rejects_scp_plain_path() -> None:
+    with pytest.raises(ValueError, match="http"):
+        validate_clone_url("github.com/acme/repo.git")
+
+
+def test_git_ssh_env_missing_key(tmp_path) -> None:
+    assert git_ssh_env(str(tmp_path / "no_existo")) is None
+
+
+def test_git_ssh_env_builds_command(tmp_path) -> None:
+    key = tmp_path / "deploy_key"
+    key.write_text("clave-privada\n")
+    env = git_ssh_env(str(key))
+    assert env is not None
+    cmd = env["GIT_SSH_COMMAND"]
+    assert "ssh -i" in cmd
+    assert "IdentitiesOnly=yes" in cmd
+    assert "StrictHostKeyChecking=accept-new" in cmd
+    assert "UserKnownHostsFile=/dev/null" in cmd
 
 
 def test_rate_limit_exempts_health() -> None:

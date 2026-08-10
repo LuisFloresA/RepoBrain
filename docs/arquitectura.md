@@ -110,3 +110,16 @@ Cliente (React) -> API (FastAPI) -> Celery/Redis -> Worker (tree-sitter + embedd
 - **Consecuencias**: métricas en `RepoOut` (todas opcionales para no romper
   clientes viejos); el mapa se genera bajo demanda, no se cachea aún (repos
   pequeños OK, repos gigantes exigirían caché por `source_rev`).
+
+### ADR-008 — Repos privados vía SSH con deploy key (solo hosts conocidos)
+- **Contexto**: producción en OCI debe indexar repos privados de
+  GitHub/GitLab/Bitbucket sin credenciales propias del usuario.
+- **Decisión**: `validate_clone_url` acepta `http(s)` (SSRF-check) y URLs SSH
+  (`git@host:owner/repo.git` o `ssh://git@host/...`) **únicamente** hacia
+  `github.com`, `gitlab.com` y `bitbucket.org`. Si la URL es SSH, el clonado y
+  el fetch incremental usan `GIT_SSH_COMMAND` con la deploy key de
+  `settings.git_ssh_key` (`IdentitiesOnly`, `accept-new`, known_hosts en
+  `/dev/null`). Sin clave configurada, una URL SSH falla con mensaje claro.
+- **Consecuencias**: el ataque SSRF no se aplica a SSH (hosts fijos y
+  allowlist); el código clonado sigue sin ejecutarse (solo parseo estático).
+  `RepoCreate.url` pasó de `HttpUrl` a `str` para admitir el formato scp-like.

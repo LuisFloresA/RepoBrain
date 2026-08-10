@@ -7,11 +7,13 @@ El código del repo NUNCA se ejecuta: solo git y parseo estático.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.core.config import settings
+from app.core.security import git_ssh_env
 
 _STATUS_LABELS = {
     "A": "añadido",
@@ -28,6 +30,11 @@ class SyncError(Exception):
 
 
 def _run_git(checkout: Path, *args: str) -> str:
+    env = None
+    if settings.git_ssh_key:
+        ssh_env = git_ssh_env(settings.git_ssh_key)
+        if ssh_env:
+            env = {**os.environ, **ssh_env}
     proc = subprocess.run(
         ["git", *args],
         cwd=str(checkout),
@@ -35,6 +42,7 @@ def _run_git(checkout: Path, *args: str) -> str:
         text=True,
         timeout=settings.git_clone_timeout_seconds,
         check=False,
+        env=env,
     )
     if proc.returncode != 0:
         raise SyncError(proc.stderr.strip()[:300])
