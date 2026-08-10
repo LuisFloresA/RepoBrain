@@ -6,6 +6,7 @@ anclas (definiciones de funciones/clases) para guiar el troceado.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from tree_sitter import Language, Parser
@@ -18,11 +19,31 @@ _JS_NODES = {
     "generator_function_declaration",
 }
 _PY_NODES = {"function_definition", "class_definition", "decorated_definition"}
+_JAVA_NODES = {
+    "method_declaration",
+    "constructor_declaration",
+    "class_declaration",
+    "interface_declaration",
+    "record_declaration",
+    "enum_declaration",
+}
+_CSHARP_NODES = {
+    "method_declaration",
+    "constructor_declaration",
+    "class_declaration",
+    "interface_declaration",
+    "record_declaration",
+    "struct_declaration",
+    "enum_declaration",
+    "namespace_declaration",
+}
 
 LANGUAGE_REGISTRY: dict[str, dict] = {
     "python": {"extensions": {".py"}, "nodes": _PY_NODES},
     "javascript": {"extensions": {".js", ".mjs", ".cjs", ".jsx"}, "nodes": _JS_NODES},
     "typescript": {"extensions": {".ts", ".tsx", ".mts", ".cts"}, "nodes": _JS_NODES},
+    "java": {"extensions": {".java"}, "nodes": _JAVA_NODES},
+    "csharp": {"extensions": {".cs"}, "nodes": _CSHARP_NODES},
 }
 
 SUPPORTED_EXTENSIONS: set[str] = {
@@ -40,6 +61,8 @@ def language_for_path(path: str) -> str | None:
 
 
 def _build_parser(language: str) -> Parser:
+    import tree_sitter_c_sharp
+    import tree_sitter_java
     import tree_sitter_javascript
     import tree_sitter_python
     import tree_sitter_typescript
@@ -48,6 +71,10 @@ def _build_parser(language: str) -> Parser:
         lang = Language(tree_sitter_python.language())
     elif language == "typescript":
         lang = Language(tree_sitter_typescript.language_typescript())
+    elif language == "java":
+        lang = Language(tree_sitter_java.language())
+    elif language == "csharp":
+        lang = Language(tree_sitter_c_sharp.language())
     else:
         lang = Language(tree_sitter_javascript.language())
     return Parser(lang)
@@ -81,6 +108,73 @@ def extract_anchors(source: str, language: str) -> list[int]:
         for child in node.children:
             stack.append(child)
     return sorted(anchors)
+
+
+_KIND_BY_NODE = {
+    # (nodo -> kind de símbolo)
+    "class_definition": "class",
+    "class_declaration": "class",
+    "record_declaration": "record",
+    "interface_declaration": "interface",
+    "struct_declaration": "struct",
+    "enum_declaration": "enum",
+    "namespace_declaration": "namespace",
+    "function_definition": "function",
+    "function_declaration": "function",
+    "generator_function_declaration": "function",
+    "method_definition": "function",
+    "method_declaration": "function",
+    "constructor_declaration": "function",
+}
+
+
+@dataclass
+class Symbol:
+    kind: str
+    name: str
+    start_line: int
+    end_line: int
+
+
+def _symbol_name(node) -> str:
+    for child in node.children:
+        if child.type == "identifier":
+            return child.text.decode("utf-8", "replace")
+    name = node.child_by_field_name("name")
+    if name is not None:
+        return name.text.decode("utf-8", "replace")
+    return node.type
+
+
+def extract_symbols(source: str, language: str) -> list[Symbol]:
+    """Devuelve clases/namespaces/funciones (incl. métodos) con su rango.
+
+    No ejecuta nada: solo recorre el AST. No desciende por cuerpos de
+    función (evita anidamientos/lambdas internas).
+    """
+    if not source.strip():
+        return []
+
+    tree = parse_tree(source, language)
+    symbols: list[Symbol] = []
+    stack = [tree.root_node]
+    while stack:
+        node = stack.pop()
+        kind = _KIND_BY_NODE.get(node.type)
+        if kind:
+            symbols.append(
+                Symbol(
+                    kind=kind,
+                    name=_symbol_name(node),
+                    start_line=node.start_point[0] + 1,
+                    end_line=node.end_point[0] + 1,
+                )
+            )
+            if kind == "function":
+                continue  # no bajar por el cuerpo de una función
+        for child in node.children:
+            stack.append(child)
+    return symbols
 
 
 def file_is_indexable(path: str) -> bool:

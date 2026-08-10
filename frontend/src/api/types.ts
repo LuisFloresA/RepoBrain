@@ -1,5 +1,23 @@
 export type RepoStatus = "created" | "indexing" | "ready" | "failed";
 
+export interface RepoStats {
+  by_language?: Record<string, number>;
+  skipped_reasons?: Record<string, number>;
+  indexed_bytes?: number;
+}
+
+export interface ChangeFile {
+  path: string;
+  status: string;
+}
+
+export interface RepoLastChanges {
+  full: boolean;
+  count: number | null;
+  files: ChangeFile[] | null;
+  commits: string[] | null;
+}
+
 export interface Repo {
   id: string;
   name: string;
@@ -11,6 +29,14 @@ export interface Repo {
   file_count: number;
   chunk_count: number;
   created_at: string;
+  branch?: string | null;
+  source_rev?: string | null;
+  indexed_files?: number | null;
+  skipped_files?: number | null;
+  indexed_bytes?: number | null;
+  last_indexed_at?: string | null;
+  stats?: RepoStats | null;
+  last_changes?: RepoLastChanges | null;
 }
 
 export interface SearchResult {
@@ -57,4 +83,25 @@ export interface HealthStatus {
   service: string;
   environment: string;
   dependencies?: Record<string, string>;
+}
+
+export interface ArchitectureNode {
+  id: string;
+  label: string;
+  kind: "file" | "class" | "function" | string;
+  path: string;
+  line: number;
+}
+
+export interface ArchitectureEdge {
+  source: string;
+  target: string;
+}
+
+export interface Architecture {
+  repo_id: string;
+  nodes: ArchitectureNode[];
+  edges: ArchitectureEdge[];
+  mermaid: string;
+  markdown: string;
 }

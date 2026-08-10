@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     max_file_bytes: int = 2 * 1024 * 1024  # 2 MB por archivo
     git_clone_timeout_seconds: int = 60
 
+    # Indexación incremental (git diff). Por encima de este umbral se hace
+    # una re-indexación completa en lugar de re-indexar solo los cambiados.
+    incremental_max_changed: int = 200
+
     # Búsqueda
     default_top_k: int = 10
     hybrid_weights: tuple[float, float] = (0.5, 0.5)  # (bm25, semántico)

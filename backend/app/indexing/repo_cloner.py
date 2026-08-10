@@ -15,8 +15,26 @@ from app.core.config import settings
 from app.core.security import resolve_within, validate_public_url
 
 
-def clone_public_repo(url: str, repo_id: str) -> str:
-    """Clona `url` dentro del workspace y devuelve el directorio de checkout."""
+def _clone_command(url: str, dest: str, branch: str | None) -> list[str]:
+    cmd = [
+        "git",
+        "clone",
+        "--depth",
+        "1",
+        "--no-hardlinks",
+        "--single-branch",
+    ]
+    if branch:
+        cmd += ["--branch", branch]
+    return cmd + ["--", url, dest]
+
+
+def clone_public_repo(url: str, repo_id: str, branch: str | None = None) -> str:
+    """Clona `url` dentro del workspace y devuelve el directorio de checkout.
+
+    Si `branch` se omite, git clona la rama por defecto remota. Con `branch`
+    se usa `--single-branch --branch <branch>` (solo esa rama, `--depth 1`).
+    """
     validate_public_url(url)
 
     base = Path(settings.workspace_root).resolve()
@@ -26,17 +44,7 @@ def clone_public_repo(url: str, repo_id: str) -> str:
 
     dest.parent.mkdir(parents=True, exist_ok=True)
 
-    cmd = [
-        "git",
-        "clone",
-        "--depth",
-        "1",
-        "--no-hardlinks",
-        "--single-branch",
-        "--",
-        url,
-        str(dest),
-    ]
+    cmd = _clone_command(url, str(dest), branch)
     try:
         proc = subprocess.run(
             cmd,

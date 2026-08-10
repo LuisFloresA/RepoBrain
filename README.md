@@ -71,11 +71,12 @@ Detalle y ADRs en [`docs/arquitectura.md`](docs/arquitectura.md).
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/api/repos` | Crear repo (`url` o `source=demo`) y encolar indexación |
-| GET | `/api/repos/{id}/status` | Progreso de indexación |
+| POST | `/api/repos` | Crear repo (`url`+opcional `branch`, o `source=demo`) y encolar indexación |
+| GET | `/api/repos/{id}/status` | Progreso de indexación + métricas de cobertura |
 | GET | `/api/repos/{id}/search?q=` | Búsqueda híbrida con citas `path:línea` |
 | POST | `/api/repos/{id}/ask` | Q&A con LLM y citas **verificadas** |
 | GET | `/api/repos/{id}/files/{path}` | Contenido de un archivo (visor) |
+| GET | `/api/repos/{id}/architecture` | Mapa de arquitectura (nodos/edges + Mermaid + Markdown) |
 
 Toda la API en [`docs/api.md`](docs/api.md).
 
@@ -104,7 +105,8 @@ npm run build
 | F1 | Index + búsqueda híbrida + visor | ✅ |
 | F2 | Q&A con LLM y citas validadas | ✅ |
 | F3 | Pulido: docs, hardening (rate limit, secretos), CI | ✅ |
-| F3+ | Deploy, Java/C#, indexación incremental | Pendiente |
+| F4 | Responsividad, ramas, Java/C#, indexación incremental, métricas, mapa de arquitectura | ✅ |
+| F5 | Deploy con badge de CI | Pendiente |
 
 ## Seguridad
 

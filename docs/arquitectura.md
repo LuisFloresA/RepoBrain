@@ -55,11 +55,13 @@ Cliente (React) -> API (FastAPI) -> Celery/Redis -> Worker (tree-sitter + embedd
 - **Contexto**: parsear múltiples lenguajes con un AST escrito a mano es un
   proyecto en sí mismo.
 - **Decisión**: usar **tree-sitter** (gramáticas `python`, `javascript`,
-  `typescript`). Los *anchors* (funciones/clases) alinean los chunks a
-  estructuras reales, y el prefijo del archivo (docstring/imports/config) se
-  indexa como chunk adicional.
-- **Consecuencias**: añadir un lenguaje = añadir una gramática pip; F2 deja
-  pendiente Java/C# (mismo mecanismo).
+  `typescript`, `java`, `csharp`). Los *anchors* (funciones/clases) alinean
+  los chunks a estructuras reales; el prefijo del archivo
+  (docstring/imports/config) se indexa como chunk adicional; `extract_symbols`
+  alimenta el mapa de arquitectura (Mermaid/Markdown).
+- **Consecuencias**: añadir un lenguaje = añadir una gramática pip al registry
+  (`LANGUAGE_REGISTRY`). El mapa de arquitectura reparsea estáticamente los
+  fuentes del checkout; nunca los ejecuta.
 
 ### ADR-003 — SQLite + FAISS (no pgvector)
 - **Contexto**: el demo debe funcionar sin infraestructura externa más allá de
@@ -84,3 +86,27 @@ Cliente (React) -> API (FastAPI) -> Celery/Redis -> Worker (tree-sitter + embedd
   `Repo.progress`; la UI hace polling de `/status`.
 - **Consecuencias**: el backend escala sin cambios de código; Redis es
   requisito del stack (ya se usa para el broker).
+
+### ADR-006 — Soporte de ramas e indexación incremental (git)
+- **Contexto**: el usuario pidió indexar ramas distintas de `main` y que un
+  re-indexado no reprocesara todo el repo (cueste tiempo en repos grandes).
+- **Decisión**: `Repo.branch` se clona con `--single-branch --branch <rama>`.
+  La re-indexación reutiliza el checkout: `sync_checkout` hace
+  `git fetch --depth 1`, compara `HEAD..FETCH_HEAD` (`git diff --name-status`)
+  y, si hay <= `incremental_max_changed` (200) archivos tocados, re-indexa solo
+  esos paths y registra `last_changes` (estados A/M/D + commits). Por encima del
+  umbral, o sin red, se re-escanea todo (`is_full`).
+- **Consecuencias**: actualizar un repo ya indexado es O(archivos cambiados);
+  `reset --hard FETCH_HEAD` se hace siempre para no indexar código obsoleto.
+  Los powers por defecto migran columnas antiguas con ALTER TABLE ligero.
+
+### ADR-007 — Métricas de cobertura y mapa de arquitectura
+- **Contexto**: el usuario quería saber qué tan completo está el índice y
+  exportar un mapa del proyecto a Markdown/Mermaid.
+- **Decisión**: la tarea persiste `stats` (chunks por lenguaje, bytes útiles,
+  razones de omisión), `indexed_files`, `skipped_files`, `source_rev`, y
+  `last_changes`. Un endpoint `GET /api/repos/{id}/architecture` reparsea el
+  checkout y genera nodos/edges + Mermaid + Markdown descargable.
+- **Consecuencias**: métricas en `RepoOut` (todas opcionales para no romper
+  clientes viejos); el mapa se genera bajo demanda, no se cachea aún (repos
+  pequeños OK, repos gigantes exigirían caché por `source_rev`).

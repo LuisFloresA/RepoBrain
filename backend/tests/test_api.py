@@ -160,3 +160,58 @@ def test_ask_short_question_validation(client, env) -> None:
     repo = _create_demo_repo(client, env["demo"])
     resp = client.post(f"/api/repos/{repo['id']}/ask", json={"question": "a"})
     assert resp.status_code == 422
+
+
+def test_repo_out_exposes_metrics(client, env) -> None:
+    repo = _create_demo_repo(client, env["demo"])
+    status = client.get(f"/api/repos/{repo['id']}/status").json()
+    assert status["indexed_files"] >= 3
+    assert status["indexed_bytes"] and status["indexed_bytes"] > 0
+    assert status["stats"]["by_language"].get("python", 0) >= 1
+    assert status["stats"]["by_language"].get("javascript", 0) >= 1
+    assert status["skipped_files"] is not None
+    assert status["last_indexed_at"] is not None
+
+
+def test_repo_out_exposes_branch(client, env) -> None:
+    import app.db.session as db_session
+    from app.db.models import Repo
+
+    session = db_session.SessionLocal()
+    try:
+        repo = Repo(name="con-rama", source="upload", status="ready", branch="develop")
+        session.add(repo)
+        session.commit()
+        repo_id = repo.id
+    finally:
+        session.close()
+    body = client.get(f"/api/repos/{repo_id}").json()
+    assert body["branch"] == "develop"
+
+
+def test_architecture_endpoint_builds_map(client, env) -> None:
+    repo = _create_demo_repo(client, env["demo"])
+    resp = client.get(f"/api/repos/{repo['id']}/architecture")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["nodes"], "El mapa debe tener nodos"
+    assert body["mermaid"].startswith("graph TD")
+    assert "auth.py" in body["markdown"]
+    assert any(n["kind"] == "function" for n in body["nodes"])
+    file_kinds = sum(1 for n in body["nodes"] if n["kind"] == "file")
+    assert file_kinds >= 3
+
+
+def test_architecture_requires_ready_repo(client, env) -> None:
+    import app.db.session as db_session
+    from app.db.models import Repo
+
+    session = db_session.SessionLocal()
+    try:
+        repo = Repo(name="en-proceso", source="demo", status="indexing")
+        session.add(repo)
+        session.commit()
+        repo_id = repo.id
+    finally:
+        session.close()
+    assert client.get(f"/api/repos/{repo_id}/architecture").status_code == 409

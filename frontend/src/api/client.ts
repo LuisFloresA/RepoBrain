@@ -1,4 +1,5 @@
 import type {
+  Architecture,
   AskResponse,
   CodeFile,
   HealthStatus,
@@ -30,7 +31,7 @@ export async function getRepos(): Promise<Repo[]> {
 }
 
 export async function createRepo(
-  payload: { url?: string; name?: string; source: string },
+  payload: { url?: string; name?: string; source: string; branch?: string | null },
 ): Promise<Repo> {
   return request<Repo>("/api/repos", {
     method: "POST",
@@ -68,4 +69,8 @@ export async function askQuestion(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question, top_k: topK }),
   });
+}
+
+export async function getArchitecture(id: string): Promise<Architecture> {
+  return request<Architecture>(`/api/repos/${id}/architecture`);
 }

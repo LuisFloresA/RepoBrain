@@ -32,11 +32,44 @@ class Server {
 }
 """
 
+JAVA_SOURCE = """\
+package com.example.app;
+
+public class AuthService {
+    private final SecretKeys keys;
+
+    public AuthService(SecretKeys keys) {
+        this.keys = keys;
+    }
+
+    public String signEmail(String email) {
+        return Jwt.sign(email, keys.get("hs256"));
+    }
+}
+"""
+
+CSHARP_SOURCE = """\
+using System;
+
+namespace LoginApi.Services
+{
+    public class AuthService
+    {
+        public string SignEmail(string email)
+        {
+            return Jwt.Sign(email, _keys);
+        }
+    }
+}
+"""
+
 
 def test_language_for_path() -> None:
     assert language_for_path("app/auth.py") == "python"
     assert language_for_path("web/api.js") == "javascript"
     assert language_for_path("web/api.tsx") == "typescript"
+    assert language_for_path("src/Main.java") == "java"
+    assert language_for_path("src/Program.cs") == "csharp"
     assert language_for_path("README.md") is None
 
 
@@ -58,6 +91,30 @@ def test_extract_anchors_javascript() -> None:
     assert 1 in anchors  # function handleLogin
     assert 6 in anchors  # class Server
     assert 7 in anchors  # start(port)
+
+
+def test_extract_anchors_java() -> None:
+    anchors = extract_anchors(JAVA_SOURCE, "java")
+    assert 3 in anchors  # class AuthService
+    assert 6 in anchors  # constructor AuthService
+    assert 10 in anchors  # signEmail
+
+
+def test_extract_anchors_csharp() -> None:
+    anchors = extract_anchors(CSHARP_SOURCE, "csharp")
+    assert 3 in anchors  # namespace
+    assert 5 in anchors  # class AuthService
+    assert 7 in anchors  # SignEmail
+
+
+def test_parse_tree_java() -> None:
+    tree = parse_tree(JAVA_SOURCE, "java")
+    assert tree.root_node.type == "program"
+
+
+def test_parse_tree_csharp() -> None:
+    tree = parse_tree(CSHARP_SOURCE, "csharp")
+    assert tree.root_node.type == "compilation_unit"
 
 
 def test_parse_is_static_and_safe() -> None:

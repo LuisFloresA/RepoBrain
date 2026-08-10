@@ -10,12 +10,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Capa cacheable: las dependencias externas se instalan UNA sola vez. Los
+# cambios de código no vuelven a compilar gramáticas ni a bajar torch/etc.
+COPY requirements-runtime.txt ./
+RUN pip install --upgrade pip \
+    && pip install -r requirements-runtime.txt
+
+# El código del proyecto se instala SIN re-resolver dependencias externas
+# (--no-deps), para que esta capa sea barata y cacheable.
 COPY pyproject.toml ./
 COPY app ./app
 COPY workers ./workers
 
-RUN pip install --upgrade pip \
-    && pip install .
+RUN pip install --no-deps .
 
 # ---------- Stage 2: runtime ----------
 FROM python:3.14-slim AS runtime

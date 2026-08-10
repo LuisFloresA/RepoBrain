@@ -9,6 +9,7 @@ import {
 import type { CodeFile, Repo, SearchResult } from "./api/types";
 import { AskPanel } from "./components/AskPanel";
 import { CodeViewer } from "./components/CodeViewer";
+import { MetricsPanel } from "./components/MetricsPanel";
 import { ProgressBar } from "./components/ProgressBar";
 import { RepoPicker } from "./components/RepoPicker";
 import { ResultsList } from "./components/ResultsList";
@@ -28,6 +29,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addUrl, setAddUrl] = useState("");
+  const [addBranch, setAddBranch] = useState("");
   const [backendStatus, setBackendStatus] = useState<string>("…");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -164,10 +166,12 @@ export function App() {
       const repo = await createRepo({
         url: addUrl.trim(),
         source: "url",
+        branch: addBranch.trim() || null,
       });
       setRepos((prev) => [repo, ...prev]);
       setActiveRepoId(repo.id);
       setAddUrl("");
+      setAddBranch("");
       setShowAddForm(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -209,6 +213,12 @@ export function App() {
               value={addUrl}
               onChange={(e) => setAddUrl(e.target.value)}
             />
+            <input
+              type="text"
+              placeholder="rama (opcional, ej. develop)"
+              value={addBranch}
+              onChange={(e) => setAddBranch(e.target.value)}
+            />
             <button type="button" onClick={handleAddRepo}>
               Indexar
             </button>
@@ -230,6 +240,10 @@ export function App() {
         />
 
         {activeRepo && <ProgressBar {...activeRepo} />}
+
+        {activeRepo && activeRepo.status === "ready" && (
+          <MetricsPanel repo={activeRepo} />
+        )}
 
         <div className="panels">
           <section aria-label="Resultados">

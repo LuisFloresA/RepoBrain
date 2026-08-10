@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
+    ArchitectureOut,
     AskRequest,
     AskResponse,
     FileOut,
@@ -17,6 +18,7 @@ from app.api.schemas import (
     RepoOut,
     SearchResponse,
 )
+from app.architecture.map import build_architecture
 from app.core.config import settings
 from app.core.security import resolve_within
 from app.db.models import Repo
@@ -66,7 +68,7 @@ def create_repo(
 
     name = payload.name or (url.rsplit("/", 1)[-1] if url else "repo")
 
-    repo = Repo(name=name, url=url, source=payload.source)
+    repo = Repo(name=name, url=url, branch=payload.branch, source=payload.source)
     session.add(repo)
     session.commit()
     session.refresh(repo)
@@ -140,6 +142,28 @@ def ask(
         citations=result["citations"],
         llm=result["llm"],
         source=result["source"],
+    )
+
+
+@router.get("/{repo_id}/architecture", response_model=ArchitectureOut)
+def get_architecture(
+    repo_id: str, session: Session = Depends(get_session)
+) -> ArchitectureOut:
+    repo = _repo_or_404(session, repo_id)
+    if repo.status != "ready":
+        raise HTTPException(status_code=409, detail=f"Repo en estado: {repo.status}")
+
+    try:
+        data = build_architecture(repo)
+    except (FileNotFoundError, OSError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return ArchitectureOut(
+        repo_id=repo_id,
+        nodes=data["nodes"],
+        edges=data["edges"],
+        mermaid=data["mermaid"],
+        markdown=data["markdown"],
     )
 
 

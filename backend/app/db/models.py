@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -27,6 +27,7 @@ class Repo(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(255))
     url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    branch: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source: Mapped[str] = mapped_column(String(32), default="url")  # url | demo | upload
     status: Mapped[str] = mapped_column(  # created|indexing|ready|failed
         String(32), default="created"
@@ -36,6 +37,16 @@ class Repo(Base):
     file_count: Mapped[int] = mapped_column(Integer, default=0)
     chunk_count: Mapped[int] = mapped_column(Integer, default=0)
     checkout_dir: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Métricas de indexado
+    source_rev: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    indexed_files: Mapped[int] = mapped_column(Integer, default=0)
+    skipped_files: Mapped[int] = mapped_column(Integer, default=0)
+    indexed_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    last_indexed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    stats: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    last_changes: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, onupdate=_now

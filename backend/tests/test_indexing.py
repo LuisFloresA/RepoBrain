@@ -38,10 +38,38 @@ def test_index_directory_produces_chunks(tmp_path) -> None:
     (root / "app" / "auth.py").write_text(
         "import jwt\n\ndef verify_jwt(token):\n    return jwt.decode(token)\n"
     )
-    chunks = index_directory(root)
+    chunks = index_directory(root).chunks
     assert len(chunks) >= 1
     assert chunks[0].path == "app/auth.py"
     assert chunks[0].start_line >= 1
+
+
+def test_index_directory_with_paths_is_incremental(tmp_path) -> None:
+    root = tmp_path / "repo"
+    (root / "app").mkdir(parents=True)
+    (root / "app" / "auth.py").write_text(
+        "import jwt\n\ndef verify_jwt(token):\n    return jwt.decode(token)\n"
+    )
+    (root / "db.py").write_text(
+        "from sqlalchemy import create_engine\n\ndef connect():\n    return None\n"
+    )
+    result = index_directory(root, paths=["app/auth.py", "botado.py"])
+    paths = {c.path for c in result.chunks}
+    assert "app/auth.py" in paths
+    assert "db.py" not in paths
+    assert result.skipped_total >= 1  # "botado.py" sin lenguaje
+
+
+def test_index_directory_reports_coverage_metrics(tmp_path) -> None:
+    root = tmp_path / "repo"
+    (root / "src").mkdir(parents=True)
+    (root / "src" / "main.js").write_text("export function run() {\n  return 1;\n}\n")
+    (root / "README.txt").write_text("texto plano")
+    result = index_directory(root)
+    assert result.by_language.get("javascript", 0) >= 1
+    assert result.indexed_bytes > 0
+    assert result.skipped_total >= 1
+    assert set(result.files) == {"src/main.js"}
 
 
 def test_clone_public_repo_blocks_internal(monkeypatch) -> None:
@@ -86,5 +114,37 @@ def test_clone_public_repo_uses_safe_argv(monkeypatch, env) -> None:
     assert "--depth" in cmd
     assert "--no-hardlinks" in cmd
     assert "--single-branch" in cmd
+    assert "--branch" not in cmd
     assert checkout.endswith("repo123")
     assert ".." not in checkout
+
+
+def test_clone_public_repo_with_branch(monkeypatch, env) -> None:
+    import app.indexing.repo_cloner as cloner
+
+    captured: list[list[str]] = []
+
+    class FakeProc:
+        returncode = 0
+        stderr = ""
+
+    def fake_validate(_url):
+        return None
+
+    def fake_run(cmd, capture_output, text, timeout, check):
+        captured.append(list(cmd))
+        from pathlib import Path
+
+        Path(cmd[-1]).mkdir(parents=True, exist_ok=True)
+        return FakeProc()
+
+    monkeypatch.setattr(cloner, "validate_public_url", fake_validate)
+    monkeypatch.setattr(cloner.subprocess, "run", fake_run)
+
+    checkout = clone_public_repo(
+        "https://github.com/example/repo.git", "repo456", branch="develop"
+    )
+    cmd = captured[0]
+    assert "--branch" in cmd
+    assert cmd[cmd.index("--branch") + 1] == "develop"
+    assert checkout.endswith("repo456")

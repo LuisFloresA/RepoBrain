@@ -254,6 +254,33 @@ body {
   align-items: start;
 }
 
+/* Permite que Monaco/el visor se encoja dentro del grid */
+.panels > * {
+  min-width: 0;
+}
+
+@media (max-width: 1000px) {
+  .panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 780px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .repo-picker {
+    grid-column: 1;
+  }
+  .content {
+    grid-column: 1;
+    padding: 1rem;
+  }
+  .ask-form {
+    flex-direction: column;
+  }
+}
+
 .results-list {
   list-style: none;
   padding: 0;
@@ -481,4 +508,164 @@ body {
 
 .citation-link:hover {
   background: #1f6feb22;
+}
+
+/* Panel de métricas */
+.metrics {
+  margin-top: 1rem;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  font-size: 0.85rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  background: #161b22;
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  min-width: 0;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #58a6ff;
+}
+
+.metric-label {
+  color: #8b949e;
+  font-size: 0.75rem;
+}
+
+.metrics-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+  color: #8b949e;
+}
+
+.metrics-row strong {
+  color: #e6edf3;
+}
+
+.rev {
+  padding: 0.05rem 0.35rem;
+  background: #161b22;
+  border-radius: 4px;
+}
+
+.metrics-langs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.lang-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  background: #1f6feb1a;
+  border: 1px solid #1f6feb44;
+  border-radius: 9999px;
+  color: #e6edf3;
+}
+
+.metrics-changes {
+  margin-top: 0.6rem;
+  color: #e6edf3;
+}
+
+.change-list {
+  list-style: none;
+  margin: 0.4rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.change-M,
+.change-modificado {
+  color: #d29922;
+}
+
+.change-A,
+.change-añadido {
+  color: #3fb950;
+}
+
+.change-D,
+.change-eliminado,
+.change-R {
+  color: #f85149;
+}
+
+.commits {
+  color: #8b949e;
+  font-size: 0.78rem;
+}
+
+.metrics-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.metrics-actions button {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #21262d;
+  color: #e6edf3;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.metrics-actions button:hover:not(:disabled) {
+  background: #30363d;
+}
+
+.metrics-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.arch-preview {
+  margin-top: 0.75rem;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.arch-preview summary {
+  cursor: pointer;
+  color: #58a6ff;
+  font-size: 0.8rem;
+}
+
+.arch-preview pre {
+  max-height: 320px;
+  overflow: auto;
+  margin: 0.5rem 0 0;
+  background: #161b22;
+  border-radius: 6px;
+  padding: 0.6rem;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.75rem;
+  color: #e6edf3;
 }
