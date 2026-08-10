@@ -16,9 +16,11 @@ RUN npm run build
 FROM nginx:1.27-alpine AS runtime
 
 RUN addgroup -S appuser \
-    && adduser -S -G appuser appuser
+    && adduser -S -G appuser appuser \
+    && chown -R appuser:appuser /var/cache/nginx
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-main.conf /etc/nginx/nginx.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh

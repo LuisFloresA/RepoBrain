@@ -1,0 +1,8 @@
+# Scripts shell: LF siempre (shebang portability dentro de contenedores Linux; "git archive" respeta el blob)
+*.sh text eol=lf
+frontend/docker-entrypoint.sh text eol=lf
+
+# Sanidad general: Dockerfiles, compose y configs con LF
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.conf text eol=lf

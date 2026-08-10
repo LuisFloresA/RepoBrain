@@ -1,5 +1,5 @@
 #!/bin/sh
-# Entrypoint de nginx no-root: reescribe el pid y lanza nginx como appuser.
+# Entrypoint de nginx no-root: lanza nginx como appuser (pid en /tmp vía nginx-main.conf).
 set -eu
 
-exec nginx -g 'pid /tmp/nginx.pid; daemon off;' "$@"
+exec nginx -g 'daemon off;'
