@@ -193,8 +193,7 @@ export function App() {
         </h1>
         <p className="tagline">
           Búsqueda semántica y Q&amp;A sobre código fuente · backend:{" "}
-          <span className={`backend-pill ${backendStatus}`}>{backendStatus}</span>{" "}
-          <span className="backend-pill ok">auto-deploy v1</span>
+          <span className={`backend-pill ${backendStatus}`}>{backendStatus}</span>
         </p>
       </header>
 
