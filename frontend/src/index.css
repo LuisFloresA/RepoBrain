@@ -29,6 +29,10 @@ body {
   min-height: 100vh;
 }
 
+.layout > * {
+  min-width: 0;
+}
+
 .topbar {
   grid-column: 1 / -1;
   padding: 1rem 1.5rem;
@@ -74,6 +78,8 @@ body {
   padding: 1rem;
   border-right: 1px solid #21262d;
   background: #161b22;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .repo-picker h2 {
@@ -115,6 +121,8 @@ body {
 }
 
 .repo-name {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -292,10 +300,12 @@ body {
   }
   .repo-picker li {
     flex-shrink: 0;
+    max-width: 68vw;
     margin: 0;
   }
   .repo-picker li button {
     width: auto;
+    max-width: 100%;
     white-space: nowrap;
     gap: 0.4rem;
     border-color: #30363d;
@@ -547,12 +557,22 @@ body {
 .answer-text {
   color: #e6edf3;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-size: 0.95rem;
   line-height: 1.5;
 }
 
 .answer-text p {
   margin: 0 0 0.4rem;
+}
+
+.answer-text pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.answer-text code {
+  overflow-wrap: anywhere;
 }
 
 .citation-list {
@@ -631,6 +651,7 @@ body {
   padding: 0.05rem 0.35rem;
   background: #161b22;
   border-radius: 4px;
+  overflow-wrap: anywhere;
 }
 
 .metrics-langs {
