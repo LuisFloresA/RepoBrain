@@ -36,17 +36,19 @@ export function SearchBox({
         minLength={2}
         disabled={disabled}
       />
-      <button type="submit" disabled={disabled || query.trim().length < 2}>
-        Buscar
-      </button>
-      <button
-        type="button"
-        className="demo"
-        onClick={onDemo}
-        data-testid="demo-button"
-      >
-        {demoLabel}
-      </button>
+      <div className="search-actions">
+        <button type="submit" disabled={disabled || query.trim().length < 2}>
+          Buscar
+        </button>
+        <button
+          type="button"
+          className="demo"
+          onClick={onDemo}
+          data-testid="demo-button"
+        >
+          {demoLabel}
+        </button>
+      </div>
     </form>
   );
 }

@@ -165,6 +165,11 @@ body {
   margin-bottom: 0.75rem;
 }
 
+.search-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .search-box input {
   flex: 1;
   padding: 0.7rem 0.9rem;
@@ -271,13 +276,77 @@ body {
   }
   .repo-picker {
     grid-column: 1;
+    border-right: 0;
+    border-bottom: 1px solid #21262d;
+    padding: 0.6rem 1rem;
+  }
+  .repo-picker h2 {
+    margin: 0;
+  }
+  .repo-picker ul {
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    margin: 0.4rem 0 0;
+    padding-bottom: 0.25rem;
+  }
+  .repo-picker li {
+    flex-shrink: 0;
+    margin: 0;
+  }
+  .repo-picker li button {
+    width: auto;
+    white-space: nowrap;
+    gap: 0.4rem;
+    border-color: #30363d;
   }
   .content {
     grid-column: 1;
     padding: 1rem;
   }
+  .topbar {
+    padding: 0.75rem 1rem;
+  }
+  .topbar h1 {
+    font-size: 1.3rem;
+  }
+  .search-box {
+    flex-direction: column;
+  }
+  .search-actions button {
+    flex: 1;
+  }
+  .add-form {
+    flex-direction: column;
+  }
+  .add-form input {
+    width: 100%;
+  }
   .ask-form {
     flex-direction: column;
+  }
+  .ask-form textarea,
+  .ask-form button {
+    width: 100%;
+  }
+  .code-viewer-header span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .result-row {
+    flex-direction: column;
+  }
+  .score-badge {
+    width: auto;
+    height: auto;
+    padding: 0.1rem 0.5rem;
+  }
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

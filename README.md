@@ -131,6 +131,9 @@ Detalle en [`docs/seguridad.md`](docs/seguridad.md).
 
 ## Documentación
 
+- [`docs/DOCUMENTACION.md`](docs/DOCUMENTACION.md) — documentación técnica
+  completa y consolidada (tecnologías, arquitectura, modelo de datos, API,
+  seguridad, despliegue y ADRs).
 - [`docs/arquitectura.md`](docs/arquitectura.md) — componentes y ADRs.
 - [`docs/api.md`](docs/api.md) — endpoints con ejemplos curl.
 - [`docs/demo.md`](docs/demo.md) — guión de demo de 2 minutos.

@@ -245,6 +245,13 @@ export function App() {
           <MetricsPanel repo={activeRepo} />
         )}
 
+        <AskPanel
+          key={activeRepoId ?? "no-repo"}
+          repoId={activeRepoId ?? ""}
+          onOpenFile={(path, line) => void openFileAt(path, line)}
+          disabled={!activeRepo || activeRepo.status !== "ready"}
+        />
+
         <div className="panels">
           <section aria-label="Resultados">
             {loading ? (
@@ -272,13 +279,6 @@ export function App() {
             )}
           </section>
         </div>
-
-        <AskPanel
-          key={activeRepoId ?? "no-repo"}
-          repoId={activeRepoId ?? ""}
-          onOpenFile={(path, line) => void openFileAt(path, line)}
-          disabled={!activeRepo || activeRepo.status !== "ready"}
-        />
       </main>
     </div>
   );
