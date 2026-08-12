@@ -175,13 +175,15 @@ export function App() {
   return (
     <div className="layout">
       <header className="topbar">
-        <h1>
-          Repo<span>Brain</span>
-        </h1>
-        <p className="tagline">
-          Búsqueda semántica y Q&amp;A sobre código fuente · backend:{" "}
-          <span className={`backend-pill ${backendStatus}`}>{backendStatus}</span>
-        </p>
+        <div className="topbar-inner">
+          <h1>
+            Repo<span>Brain</span>
+          </h1>
+          <p className="tagline">
+            Búsqueda semántica y Q&amp;A sobre código fuente · backend:{" "}
+            <span className={`backend-pill ${backendStatus}`}>{backendStatus}</span>
+          </p>
+        </div>
       </header>
 
       <main className="content">

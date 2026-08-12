@@ -29,15 +29,29 @@ body {
   min-height: 100vh;
 }
 
+/* Columna de contenido centrada y con ancho cómodo en escritorio */
+.layout > .content {
+  justify-self: center;
+  width: 100%;
+  max-width: 1180px;
+}
+
 .layout > * {
   min-width: 0;
 }
 
 .topbar {
   grid-column: 1 / -1;
-  padding: 1rem 1.5rem;
+  padding: 1rem 0;
   border-bottom: 1px solid #21262d;
   background: #161b22;
+}
+
+/* Alinea el texto del header con el ancho del contenido principal */
+.topbar-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
 }
 
 .topbar h1 {
@@ -164,7 +178,6 @@ body {
 .content {
   grid-column: 1;
   padding: 1.5rem;
-  max-width: 1400px;
 }
 
 .search-section {
@@ -308,7 +321,10 @@ body {
     padding: 1rem;
   }
   .topbar {
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0;
+  }
+  .topbar-inner {
+    padding: 0 1rem;
   }
   .topbar h1 {
     font-size: 1.3rem;
