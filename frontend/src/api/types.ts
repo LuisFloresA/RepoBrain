@@ -105,3 +105,9 @@ export interface Architecture {
   mermaid: string;
   markdown: string;
 }
+
+export interface RepoBranchesResponse {
+  url: string;
+  default_branch: string | null;
+  branches: string[];
+}

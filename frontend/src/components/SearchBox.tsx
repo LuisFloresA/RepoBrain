@@ -3,6 +3,7 @@ interface SearchBoxProps {
   onQueryChange: (value: string) => void;
   onSubmit: () => void;
   disabled?: boolean;
+  loading?: boolean;
 }
 
 export function SearchBox({
@@ -10,6 +11,7 @@ export function SearchBox({
   onQueryChange,
   onSubmit,
   disabled,
+  loading,
 }: SearchBoxProps) {
   return (
     <form
@@ -30,11 +32,11 @@ export function SearchBox({
         onChange={(e) => onQueryChange(e.target.value)}
         placeholder="Pregunta en lenguaje natural… p. ej. ¿dónde se valida el JWT?"
         minLength={2}
-        disabled={disabled}
+        disabled={disabled || loading}
       />
       <div className="search-actions">
-        <button type="submit" disabled={disabled || query.trim().length < 2}>
-          Buscar
+        <button type="submit" disabled={disabled || loading || query.trim().length < 2}>
+          {loading ? "Buscando…" : "Buscar"}
         </button>
       </div>
     </form>

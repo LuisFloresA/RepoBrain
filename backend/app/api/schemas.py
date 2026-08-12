@@ -15,6 +15,12 @@ class RepoCreate(BaseModel):
     source: str = Field(default="url", pattern="^(url|demo|upload)$")
 
 
+class RepoBranchesOut(BaseModel):
+    url: str
+    default_branch: str | None = None
+    branches: list[str]
+
+
 class RepoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

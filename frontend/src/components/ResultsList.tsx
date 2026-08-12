@@ -19,9 +19,17 @@ interface ResultsListProps {
 export function ResultsList({ results, query, onSelect }: ResultsListProps) {
   if (results.length === 0) {
     return (
-      <p className="no-results">
-        Sin resultados para “{query}”. Prueba con otras palabras.
-      </p>
+      <div className="empty-results-card">
+        <h3>Sin resultados</h3>
+        <p className="no-results">
+          No se encontraron fragmentos para &ldquo;{query}&rdquo;.
+        </p>
+        <ul className="empty-results-tips">
+          <li>Prueba con palabras clave más generales.</li>
+          <li>Utiliza nombres de archivos, funciones o clases específicas.</li>
+          <li>Si el código está en inglés, intenta términos en inglés (ej. auth, handler, parse).</li>
+        </ul>
+      </div>
     );
   }
   return (

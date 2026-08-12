@@ -4,22 +4,44 @@ import type {
   CodeFile,
   HealthStatus,
   Repo,
+  RepoBranchesResponse,
   SearchResponse,
 } from "./types";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const resp = await fetch(path, init);
-  if (!resp.ok) {
-    let detail = `Error ${resp.status}`;
-    try {
-      const body = (await resp.json()) as { detail?: string };
-      if (body.detail) detail = body.detail;
-    } catch {
-      /* respuesta no JSON */
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  timeoutMs = 25000,
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    const resp = await fetch(path, {
+      ...init,
+      signal: init?.signal ?? controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!resp.ok) {
+      let detail = `Error ${resp.status}`;
+      try {
+        const body = (await resp.json()) as { detail?: string };
+        if (body.detail) detail = body.detail;
+      } catch {
+        /* respuesta no JSON */
+      }
+      throw new Error(detail);
     }
-    throw new Error(detail);
+    return (await resp.json()) as T;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Tiempo de espera agotado al comunicarse con el servidor. Intenta de nuevo.");
+    }
+    throw err;
   }
-  return (await resp.json()) as T;
 }
 
 export async function fetchHealth(endpoint = "/health"): Promise<HealthStatus> {
@@ -75,13 +97,22 @@ export async function askQuestion(
   question: string,
   topK = 5,
 ): Promise<AskResponse> {
-  return request<AskResponse>(`/api/repos/${id}/ask`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, top_k: topK }),
-  });
+  return request<AskResponse>(
+    `/api/repos/${id}/ask`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, top_k: topK }),
+    },
+    35000,
+  );
 }
 
 export async function getArchitecture(id: string): Promise<Architecture> {
   return request<Architecture>(`/api/repos/${id}/architecture`);
+}
+
+export async function getRepoBranches(url: string): Promise<RepoBranchesResponse> {
+  const params = new URLSearchParams({ url });
+  return request<RepoBranchesResponse>(`/api/repos/branches?${params}`);
 }

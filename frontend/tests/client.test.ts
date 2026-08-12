@@ -70,4 +70,24 @@ describe("api client", () => {
     expect(String(url)).toBe("/api/repos");
     expect(init?.method).toBe("DELETE");
   });
+
+  it("obtiene ramas de un repositorio remoto", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          url: "https://github.com/usuario/repo.git",
+          default_branch: "main",
+          branches: ["main", "develop"],
+        }),
+      }),
+    );
+    const { getRepoBranches } = await import("../src/api/client");
+    const res = await getRepoBranches("https://github.com/usuario/repo.git");
+    expect(res.default_branch).toBe("main");
+    expect(res.branches).toEqual(["main", "develop"]);
+    const url = String(vi.mocked(fetch).mock.calls[0][0]);
+    expect(url).toContain("/api/repos/branches?url=https%3A%2F%2Fgithub.com%2Fusuario%2Frepo.git");
+  });
 });

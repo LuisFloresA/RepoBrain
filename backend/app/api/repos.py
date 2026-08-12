@@ -14,6 +14,7 @@ from app.api.schemas import (
     AskResponse,
     FileOut,
     MessageOut,
+    RepoBranchesOut,
     RepoCreate,
     RepoOut,
     SearchResponse,
@@ -24,6 +25,7 @@ from app.core.security import resolve_within
 from app.db.models import Repo
 from app.db.session import get_session
 from app.indexing.parser import language_for_path
+from app.indexing.repo_cloner import list_remote_branches
 from app.vector.qa_service import qa_service
 from app.vector.search_service import search_service
 from workers.celery_app import celery_app
@@ -74,6 +76,18 @@ def create_repo(
     session.refresh(repo)
     _enqueue_index(session, repo)
     return repo
+
+
+@router.get("/branches", response_model=RepoBranchesOut)
+def get_repo_branches(
+    url: str = Query(..., min_length=3, max_length=2048, description="URL del repositorio remoto")
+) -> RepoBranchesOut:
+    """Obtiene la lista de ramas y la rama por defecto de un repositorio remoto."""
+    try:
+        data = list_remote_branches(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return RepoBranchesOut(**data)
 
 
 @router.get("/{repo_id}", response_model=RepoOut)

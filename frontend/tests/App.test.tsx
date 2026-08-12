@@ -20,6 +20,7 @@ vi.mock("../src/api/client", () => ({
   getRepoStatus: vi.fn(),
   searchRepo: vi.fn(),
   askQuestion: vi.fn(),
+  getRepoBranches: vi.fn().mockResolvedValue({ url: "", default_branch: null, branches: [] }),
 }));
 
 vi.mock("../src/components/CodeViewer", () => ({
@@ -181,5 +182,40 @@ describe("App", () => {
 
     window.dispatchEvent(new Event("beforeunload"));
     expect(deleteRepo).toHaveBeenCalledWith("demo1", true);
+  });
+
+  it("muestra el estado de la API en la barra superior", async () => {
+    render(<App />);
+    expect(await screen.findByText(/\(API:/)).toBeInTheDocument();
+  });
+
+  it("muestra la pantalla de carga durante la búsqueda y estado sin resultados", async () => {
+    let resolveSearch: (val: any) => void;
+    const searchPromise = new Promise((resolve) => {
+      resolveSearch = resolve;
+    });
+    vi.mocked(searchRepo).mockReturnValue(searchPromise as any);
+
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByTestId("use-demo"));
+    const input = await screen.findByPlaceholderText(/Pregunta en lenguaje natural/);
+    await waitFor(() => expect(input).toBeEnabled(), { timeout: 4000 });
+    await user.type(input, "termino desconocido");
+    await user.click(screen.getByRole("button", { name: "Buscar" }));
+
+    // Verifica que se muestra la pantalla de carga de búsqueda
+    expect(screen.getByRole("status")).toHaveTextContent("Buscando en el repositorio…");
+
+    // Resuelve con 0 resultados
+    resolveSearch!({
+      query: "termino desconocido",
+      repo_id: "demo1",
+      top_k: 10,
+      results: [],
+    });
+
+    expect(await screen.findByText("Sin resultados")).toBeInTheDocument();
+    expect(screen.getByText(/No se encontraron fragmentos para/)).toBeInTheDocument();
   });
 });

@@ -59,17 +59,23 @@ describe("AskPanel", () => {
     expect(screen.getByPlaceholderText(/soft delete/)).toBeDisabled();
   });
 
-  it("muestra error si la petición falla", async () => {
-    vi.mocked(askQuestion).mockRejectedValue(new Error("boom"));
+  it("muestra la pantalla de carga mientras genera la respuesta", async () => {
+    let resolveFn: (val: AskResponse) => void;
+    const promise = new Promise<AskResponse>((resolve) => {
+      resolveFn = resolve;
+    });
+    vi.mocked(askQuestion).mockReturnValue(promise);
+
     const user = userEvent.setup();
     render(<AskPanel repoId="r1" onOpenFile={vi.fn()} />);
 
-    await user.type(
-      screen.getByPlaceholderText(/soft delete/),
-      "¿cómo se hace el soft delete?",
-    );
+    const textarea = screen.getByPlaceholderText(/soft delete/);
+    await user.type(textarea, "¿cómo se hace el soft delete?");
     await user.click(screen.getByTestId("ask-submit"));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("boom");
+    expect(screen.getByRole("status")).toHaveTextContent("Generando respuesta con IA…");
+
+    resolveFn!(mockAnswer);
+    expect(await screen.findByText("app/models.py:27")).toBeInTheDocument();
   });
 });

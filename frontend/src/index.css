@@ -52,6 +52,15 @@ body {
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.topbar-brand {
+  display: flex;
+  flex-direction: column;
 }
 
 .topbar h1 {
@@ -67,6 +76,13 @@ body {
   margin: 0.25rem 0 0;
   color: #8b949e;
   font-size: 0.9rem;
+}
+
+.topbar-status {
+  font-size: 0.9rem;
+  color: #8b949e;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .backend-pill {
@@ -111,18 +127,113 @@ body {
 
 .repo-setup-form {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
-.repo-setup-form input {
-  flex: 1;
-  min-width: 0;
+.repo-setup-fields {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.repo-setup-fields input,
+.repo-setup-fields select {
   padding: 0.7rem 0.9rem;
   background: #0d1117;
   border: 1px solid #30363d;
   border-radius: 8px;
   color: #e6edf3;
   font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.repo-setup-fields input:focus,
+.repo-setup-fields select:focus {
+  outline: none;
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px #1f6feb33;
+}
+
+.repo-setup-url-input {
+  flex: 1.4;
+  min-width: 0;
+}
+
+.repo-setup-branch-wrapper {
+  flex: 1;
+  min-width: 170px;
+  display: flex;
+  align-items: stretch;
+}
+
+.repo-setup-branch-select {
+  width: 100%;
+  cursor: pointer;
+  background-color: #0d1117;
+}
+
+.repo-setup-branch-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  background: #161b22;
+  border: 1px dashed #30363d;
+  border-radius: 8px;
+  color: #8b949e;
+  font-size: 0.85rem;
+}
+
+.repo-setup-manual-branch {
+  display: flex;
+  gap: 0.3rem;
+  width: 100%;
+  align-items: stretch;
+}
+
+.repo-setup-branch-input {
+  width: 100%;
+}
+
+.repo-setup-toggle-btn {
+  padding: 0.4rem 0.6rem !important;
+  font-size: 0.75rem !important;
+  background: #21262d !important;
+  color: #58a6ff !important;
+  border: 1px solid #30363d !important;
+  border-radius: 6px !important;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.repo-setup-toggle-btn:hover {
+  background: #30363d !important;
+  color: #79c0ff !important;
+}
+
+.repo-setup-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.repo-setup-badge-ok {
+  color: #3fb950;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.repo-setup-badge-warn {
+  color: #d29922;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .repo-setup-form input::placeholder {
@@ -137,6 +248,7 @@ body {
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .repo-setup-form button:hover:not(:disabled) {
@@ -338,7 +450,12 @@ body {
   .repo-setup-form {
     flex-direction: column;
   }
-  .repo-setup-form input {
+  .repo-setup-fields {
+    flex-direction: column;
+  }
+  .repo-setup-fields input,
+  .repo-setup-fields select,
+  .repo-setup-branch-wrapper {
     width: 100%;
   }
   .repo-setup-demo {
@@ -453,6 +570,93 @@ body {
 .no-results,
 .loading {
   color: #8b949e;
+}
+
+/* Spinner animado puro en CSS (sin emojis) */
+.spinner-ring {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #30363d;
+  border-top-color: #58a6ff;
+  border-radius: 50%;
+  animation: spinnerRotate 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spinnerRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pantalla de carga para búsqueda en el código */
+.search-loading-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 1.25rem;
+  color: #e6edf3;
+  animation: fadeIn 0.25s ease;
+}
+
+.search-loading-text,
+.ask-loading-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.search-loading-text strong,
+.ask-loading-text strong {
+  font-size: 0.95rem;
+  color: #e6edf3;
+}
+
+.search-loading-text span,
+.ask-loading-text span {
+  font-size: 0.82rem;
+  color: #8b949e;
+}
+
+/* Pantalla de carga para preguntas IA */
+.ask-loading-panel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 1.25rem;
+  color: #e6edf3;
+  animation: fadeIn 0.25s ease;
+}
+
+/* Tarjeta estructurada cuando no hay resultados */
+.empty-results-card {
+  background: #161b22;
+  border: 1px dashed #30363d;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.empty-results-card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  color: #e6edf3;
+}
+
+.empty-results-tips {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
+  color: #8b949e;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
 .code-viewer {

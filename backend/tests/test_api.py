@@ -236,3 +236,62 @@ def test_architecture_requires_ready_repo(client, env) -> None:
     finally:
         session.close()
     assert client.get(f"/api/repos/{repo_id}/architecture").status_code == 409
+
+
+def test_get_branches_endpoint_success(client, monkeypatch) -> None:
+    import app.api.repos as repos_module
+
+    def fake_list_remote_branches(url: str):
+        return {
+            "url": url,
+            "default_branch": "main",
+            "branches": ["main", "develop", "feature/login"],
+        }
+
+    monkeypatch.setattr(repos_module, "list_remote_branches", fake_list_remote_branches)
+
+    resp = client.get("/api/repos/branches", params={"url": "https://github.com/usuario/repo.git"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["url"] == "https://github.com/usuario/repo.git"
+    assert body["default_branch"] == "main"
+    assert body["branches"] == ["main", "develop", "feature/login"]
+
+
+def test_get_branches_endpoint_invalid_url_returns_400(client, monkeypatch) -> None:
+    import app.api.repos as repos_module
+
+    def fake_list_remote_branches(url: str):
+        raise ValueError("La URL resuelve a una IP privada")
+
+    monkeypatch.setattr(repos_module, "list_remote_branches", fake_list_remote_branches)
+
+    resp = client.get("/api/repos/branches", params={"url": "https://127.0.0.1/repo.git"})
+    assert resp.status_code == 400
+    assert "IP privada" in resp.json()["detail"]
+
+
+def test_list_remote_branches_parsing(monkeypatch) -> None:
+    from app.indexing.repo_cloner import list_remote_branches
+
+    class FakeCompletedProc:
+        returncode = 0
+        stdout = (
+            "ref: refs/heads/main\tHEAD\n"
+            "c0ffee1234567890\tHEAD\n"
+            "c0ffee1234567890\trefs/heads/main\n"
+            "a1b2c3d4e5f60718\trefs/heads/develop\n"
+            "9876543210fedcba\trefs/heads/feature/auth\n"
+        )
+        stderr = ""
+
+    import subprocess
+
+    import app.indexing.repo_cloner as cloner_module
+
+    monkeypatch.setattr(cloner_module, "validate_clone_url", lambda url: (url, False))
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: FakeCompletedProc())
+
+    res = list_remote_branches("https://github.com/usuario/repo")
+    assert res["default_branch"] == "main"
+    assert res["branches"] == ["main", "develop", "feature/auth"]

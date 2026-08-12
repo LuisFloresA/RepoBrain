@@ -176,13 +176,17 @@ export function App() {
     <div className="layout">
       <header className="topbar">
         <div className="topbar-inner">
-          <h1>
-            Repo<span>Brain</span>
-          </h1>
-          <p className="tagline">
-            Búsqueda semántica y Q&amp;A sobre código fuente · backend:{" "}
-            <span className={`backend-pill ${backendStatus}`}>{backendStatus}</span>
-          </p>
+          <div className="topbar-brand">
+            <h1>
+              Repo<span>Brain</span>
+            </h1>
+            <p className="tagline">
+              Búsqueda semántica y Q&amp;A sobre código fuente
+            </p>
+          </div>
+          <div className="topbar-status" aria-live="polite">
+            (API: <span className={`backend-pill ${backendStatus}`}>{backendStatus}</span>)
+          </div>
         </div>
       </header>
 
@@ -219,6 +223,7 @@ export function App() {
                 onQueryChange={setQuery}
                 onSubmit={() => void runSearch(query.trim())}
                 disabled={!repoReady}
+                loading={loading}
               />
             </section>
 
@@ -234,7 +239,13 @@ export function App() {
             <div className="panels">
               <section aria-label="Resultados">
                 {loading ? (
-                  <p className="loading">Buscando…</p>
+                  <div className="search-loading-panel" role="status" aria-live="polite">
+                    <div className="spinner-ring" aria-hidden="true" />
+                    <div className="search-loading-text">
+                      <strong>Buscando en el repositorio…</strong>
+                      <span>Analizando fragmentos semánticos y léxicos en el código.</span>
+                    </div>
+                  </div>
                 ) : (
                   <ResultsList
                     results={results}

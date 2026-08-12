@@ -84,13 +84,24 @@ export function AskPanel({ repoId, onOpenFile, disabled }: AskPanelProps) {
         </button>
       </div>
 
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
+      {loading && (
+        <div className="ask-loading-panel" role="status" aria-live="polite">
+          <div className="spinner-ring" aria-hidden="true" />
+          <div className="ask-loading-text">
+            <strong>Generando respuesta con IA…</strong>
+            <span>Recuperando fragmentos de código relevantes y sintetizando la respuesta.</span>
+          </div>
+        </div>
       )}
 
-      {answer && (
+      {error && !loading && (
+        <div className="error" role="alert">
+          <strong>No se pudo completar la pregunta</strong>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {answer && !loading && (
         <div className="ask-answer">
           <p className="ask-source">
             Respuesta generada · motor: {answer.llm || answer.source}
