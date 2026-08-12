@@ -46,4 +46,28 @@ describe("api client", () => {
       "/api/repos/r1/files/app/auth.py",
     );
   });
+
+  it("borra un repo con DELETE y keepalive", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: "Repo eliminado" }) }),
+    );
+    const { deleteRepo } = await import("../src/api/client");
+    await deleteRepo("r1", true);
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toBe("/api/repos/r1");
+    expect(init).toMatchObject({ method: "DELETE", keepalive: true });
+  });
+
+  it("limpia todos los repos con DELETE en el raíz", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: "2 repos eliminados" }) }),
+    );
+    const { cleanupRepos } = await import("../src/api/client");
+    await cleanupRepos();
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toBe("/api/repos");
+    expect(init?.method).toBe("DELETE");
+  });
 });

@@ -112,6 +112,27 @@ def test_delete_repo(client, env) -> None:
     assert client.get(f"/api/repos/{repo['id']}").status_code == 404
 
 
+def test_cleanup_removes_all_repos(client, env) -> None:
+    _create_demo_repo(client, env["demo"], name="demo-tambien")
+
+    import app.db.session as db_session
+    from app.db.models import Repo
+
+    session = db_session.SessionLocal()
+    try:
+        repo = Repo(name="sesion-anterior", source="url", status="ready")
+        session.add(repo)
+        session.commit()
+        repo_id = repo.id
+    finally:
+        session.close()
+
+    resp = client.delete("/api/repos")
+    assert resp.status_code == 200
+    assert client.get(f"/api/repos/{repo_id}").status_code == 404
+    assert client.get("/api/repos").json() == []
+
+
 def test_search_short_query_validation(client, env) -> None:
     repo = _create_demo_repo(client, env["demo"])
     assert (

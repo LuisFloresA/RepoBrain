@@ -1,82 +1,79 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  cleanupRepos,
   createRepo,
+  deleteRepo,
   getFile,
   getRepoStatus,
-  getRepos,
   searchRepo,
 } from "./api/client";
 import type { CodeFile, Repo, SearchResult } from "./api/types";
 import { AskPanel } from "./components/AskPanel";
 import { CodeViewer } from "./components/CodeViewer";
 import { MetricsPanel } from "./components/MetricsPanel";
-import { ProgressBar } from "./components/ProgressBar";
-import { RepoPicker } from "./components/RepoPicker";
+import { ProgressModal } from "./components/ProgressModal";
+import { RepoSetup } from "./components/RepoSetup";
 import { ResultsList } from "./components/ResultsList";
 import { SearchBox } from "./components/SearchBox";
 
-const DEMO_QUERY = "¿dónde se valida el JWT?";
+const DEMO_NAME = "Demo · login-api (JWT)";
 
 export function App() {
-  const [repos, setRepos] = useState<Repo[]>([]);
-  const [activeRepoId, setActiveRepoId] = useState<string | null>(null);
+  const [repo, setRepo] = useState<Repo | null>(null);
   const [query, setQuery] = useState("");
-  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [selectedFile, setSelectedFile] = useState<CodeFile | null>(null);
   const [highlightLine, setHighlightLine] = useState<number | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [addUrl, setAddUrl] = useState("");
-  const [addBranch, setAddBranch] = useState("");
+  const [setupBusy, setSetupBusy] = useState(false);
   const [backendStatus, setBackendStatus] = useState<string>("…");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
-
-  const loadRepos = useCallback(async () => {
-    try {
-      const list = await getRepos();
-      setRepos(list);
-      const demo = list.find((r) => r.source === "demo") ?? null;
-      const ready = list.find((r) => r.status === "ready") ?? null;
-      if (!activeRepoId) {
-        setActiveRepoId((demo ?? ready ?? list[0])?.id ?? null);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, [activeRepoId]);
+  const sessionRepoRef = useRef<string | null>(null);
 
   useEffect(() => {
-    void loadRepos();
-  }, [loadRepos]);
-
-  useEffect(() => {
+    void cleanupRepos().catch(() => {
+      /* la limpieza de sesiones previas es best-effort */
+    });
     void fetch("/health")
       .then((r) => r.json())
       .then((h: { status: string }) => setBackendStatus(h.status))
       .catch(() => setBackendStatus("offline"));
   }, []);
 
+  // Sesión efímera: al salir de la página se borra el repo indexado.
+  useEffect(() => {
+    const cleanup = () => {
+      const id = sessionRepoRef.current;
+      if (id) {
+        void deleteRepo(id, true).catch(() => {
+          /* el cleanup del próximo arranque cubre lo que quede */
+        });
+      }
+    };
+    window.addEventListener("beforeunload", cleanup);
+    window.addEventListener("pagehide", cleanup);
+    return () => {
+      window.removeEventListener("beforeunload", cleanup);
+      window.removeEventListener("pagehide", cleanup);
+    };
+  }, []);
+
   // Polling del estado de indexación
-  const repoId = activeRepo?.id;
-  const repoStatus = activeRepo?.status;
+  const repoId = repo?.id;
+  const repoStatus = repo?.status;
   useEffect(() => {
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
-    if (!repoId || repoStatus !== "indexing") {
+    if (!repoId || repoStatus === "ready" || repoStatus === "failed") {
       return;
     }
     pollRef.current = setInterval(async () => {
       try {
         const fresh = await getRepoStatus(repoId);
-        setRepos((prev) =>
-          prev.map((r) => (r.id === fresh.id ? fresh : r)),
-        );
+        setRepo((prev) => (prev && prev.id === fresh.id ? fresh : prev));
       } catch {
         /* el poll reintenta */
       }
@@ -88,11 +85,11 @@ export function App() {
 
   const runSearch = useCallback(
     async (q: string) => {
-      if (!activeRepoId) return;
+      if (!repoId) return;
       setError(null);
       setLoading(true);
       try {
-        const res = await searchRepo(activeRepoId, q);
+        const res = await searchRepo(repoId, q);
         setResults(res.results);
         setSelectedFile(null);
       } catch (e) {
@@ -101,47 +98,59 @@ export function App() {
         setLoading(false);
       }
     },
-    [activeRepoId],
+    [repoId],
   );
 
-  // Auto-búsqueda cuando el repo de demo queda listo
-  useEffect(() => {
-    if (activeRepo?.status === "ready" && pendingQuery) {
-      void runSearch(pendingQuery);
-      setPendingQuery(null);
+  const handleIndex = async (url: string, branch: string) => {
+    setError(null);
+    setSetupBusy(true);
+    try {
+      const created = await createRepo({
+        url,
+        source: "url",
+        branch: branch || null,
+      });
+      sessionRepoRef.current = created.id;
+      setRepo(created);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSetupBusy(false);
     }
-  }, [activeRepo?.status, pendingQuery, runSearch]);
-
-  const handleSubmit = () => {
-    if (!query.trim()) return;
-    setPendingQuery(null);
-    void runSearch(query.trim());
   };
 
   const handleDemo = async () => {
-    setQuery(DEMO_QUERY);
-    if (activeRepo && activeRepo.status === "ready") {
-      await runSearch(DEMO_QUERY);
-      return;
+    setError(null);
+    setSetupBusy(true);
+    try {
+      const created = await createRepo({ source: "demo", name: DEMO_NAME });
+      sessionRepoRef.current = created.id;
+      setRepo(created);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSetupBusy(false);
     }
-    // Crea el repo demo si no está listo, y dispara la búsqueda cuando termine
-    setPendingQuery(DEMO_QUERY);
-    if (!activeRepoId) {
-      try {
-        const demo = await createRepo({ source: "demo", name: "Demo · login-api" });
-        setRepos((prev) => [demo, ...prev]);
-        setActiveRepoId(demo.id);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-      }
+  };
+
+  const handleModalClose = () => {
+    const id = sessionRepoRef.current;
+    sessionRepoRef.current = null;
+    setRepo(null);
+    setResults([]);
+    setSelectedFile(null);
+    if (id) {
+      void deleteRepo(id).catch(() => {
+        /* best-effort */
+      });
     }
   };
 
   const handleSelectResult = async (result: SearchResult) => {
-    if (!activeRepoId) return;
+    if (!repoId) return;
     setHighlightLine(result.start_line);
     try {
-      const file = await getFile(activeRepoId, result.path);
+      const file = await getFile(repoId, result.path);
       setSelectedFile(file);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -149,41 +158,19 @@ export function App() {
   };
 
   const openFileAt = async (path: string, line: number) => {
-    if (!activeRepoId) return;
+    if (!repoId) return;
     setHighlightLine(line);
     try {
-      const file = await getFile(activeRepoId, path);
+      const file = await getFile(repoId, path);
       setSelectedFile(file);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   };
 
-  const handleAddRepo = async () => {
-    if (!addUrl.trim()) return;
-    setError(null);
-    try {
-      const repo = await createRepo({
-        url: addUrl.trim(),
-        source: "url",
-        branch: addBranch.trim() || null,
-      });
-      setRepos((prev) => [repo, ...prev]);
-      setActiveRepoId(repo.id);
-      setAddUrl("");
-      setAddBranch("");
-      setShowAddForm(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  const selectRepo = (id: string) => {
-    setActiveRepoId(id);
-    setResults([]);
-    setSelectedFile(null);
-    setPendingQuery(null);
-  };
+  const repoReady = repo?.status === "ready";
+  const showModal =
+    repo !== null && repo.status !== "ready";
 
   return (
     <div className="layout">
@@ -197,89 +184,85 @@ export function App() {
         </p>
       </header>
 
-      <RepoPicker
-        repos={repos}
-        activeId={activeRepoId}
-        onSelect={selectRepo}
-        onAdd={() => setShowAddForm((v) => !v)}
-      />
-
       <main className="content">
-        {showAddForm && (
-          <div className="add-form">
-            <input
-              type="url"
-              placeholder="https://github.com/usuario/repo"
-              value={addUrl}
-              onChange={(e) => setAddUrl(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="rama (opcional, ej. develop)"
-              value={addBranch}
-              onChange={(e) => setAddBranch(e.target.value)}
-            />
-            <button type="button" onClick={handleAddRepo}>
-              Indexar
-            </button>
-          </div>
-        )}
-
         {error && (
           <p className="error" role="alert">
             {error}
           </p>
         )}
 
-        <SearchBox
-          query={query}
-          onQueryChange={setQuery}
-          onSubmit={handleSubmit}
-          onDemo={handleDemo}
-          disabled={!activeRepo || activeRepo.status !== "ready"}
-        />
-
-        {activeRepo && <ProgressBar {...activeRepo} />}
-
-        {activeRepo && activeRepo.status === "ready" && (
-          <MetricsPanel repo={activeRepo} />
-        )}
-
-        <AskPanel
-          key={activeRepoId ?? "no-repo"}
-          repoId={activeRepoId ?? ""}
-          onOpenFile={(path, line) => void openFileAt(path, line)}
-          disabled={!activeRepo || activeRepo.status !== "ready"}
-        />
-
-        <div className="panels">
-          <section aria-label="Resultados">
-            {loading ? (
-              <p className="loading">Buscando…</p>
-            ) : (
-              <ResultsList
-                results={results}
-                query={query}
-                onSelect={(r) => void handleSelectResult(r)}
-              />
-            )}
-          </section>
-
-          <section aria-label="Visor de código">
-            {selectedFile ? (
-              <CodeViewer
-                file={selectedFile}
-                highlightLine={highlightLine}
-              />
-            ) : (
-              <div className="empty-viewer">
-                Haz clic en un resultado para ver el código con la línea
-                resaltada.
+        {!repo ? (
+          <RepoSetup
+            onIndex={(url, branch) => void handleIndex(url, branch)}
+            onDemo={() => void handleDemo()}
+            disabled={setupBusy}
+          />
+        ) : (
+          <>
+            <section className="search-section" aria-label="Buscar en el código">
+              <div className="section-heading">
+                <span className="section-num" aria-hidden="true">
+                  1
+                </span>
+                <div>
+                  <h2 className="section-title">Buscar en el código</h2>
+                  <p className="section-subtitle">
+                    Encuentra los fragmentos de código relevantes para tu
+                    pregunta.
+                  </p>
+                </div>
               </div>
-            )}
-          </section>
-        </div>
+              <SearchBox
+                query={query}
+                onQueryChange={setQuery}
+                onSubmit={() => void runSearch(query.trim())}
+                disabled={!repoReady}
+              />
+            </section>
+
+            {repoReady && <MetricsPanel repo={repo} />}
+
+            <AskPanel
+              key={repoId ?? "no-repo"}
+              repoId={repoId ?? ""}
+              onOpenFile={(path, line) => void openFileAt(path, line)}
+              disabled={!repoReady}
+            />
+
+            <div className="panels">
+              <section aria-label="Resultados">
+                {loading ? (
+                  <p className="loading">Buscando…</p>
+                ) : (
+                  <ResultsList
+                    results={results}
+                    query={query}
+                    onSelect={(r) => void handleSelectResult(r)}
+                  />
+                )}
+              </section>
+
+              <section aria-label="Visor de código">
+                {selectedFile ? (
+                  <CodeViewer
+                    file={selectedFile}
+                    highlightLine={highlightLine}
+                  />
+                ) : (
+                  <div className="empty-viewer">
+                    Haz clic en un resultado para ver el código con la línea
+                    resaltada.
+                  </div>
+                )}
+              </section>
+            </div>
+          </>
+        )}
       </main>
+
+      {showModal && repo && (
+        <ProgressModal repo={repo} onClose={handleModalClose} />
+      )}
     </div>
   );
 }

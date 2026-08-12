@@ -50,8 +50,18 @@ export function AskPanel({ repoId, onOpenFile, disabled }: AskPanelProps) {
   };
 
   return (
-    <section className="ask-panel" aria-label="Pregunta al código">
-      <h2 className="ask-title">Pregunta al código</h2>
+    <section className="ask-panel" aria-label="Preguntar con IA">
+      <div className="section-heading">
+        <span className="section-num" aria-hidden="true">
+          2
+        </span>
+        <div>
+          <h2 className="section-title">Preguntar con IA</h2>
+          <p className="section-subtitle">
+            Obtén una respuesta generada con citas a las líneas del código.
+          </p>
+        </div>
+      </div>
       <div className="ask-form">
         <label className="visually-hidden" htmlFor="ask-input">
           Pregunta sobre el repositorio

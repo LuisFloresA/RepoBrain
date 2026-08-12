@@ -2,18 +2,14 @@ interface SearchBoxProps {
   query: string;
   onQueryChange: (value: string) => void;
   onSubmit: () => void;
-  onDemo: () => void;
   disabled?: boolean;
-  demoLabel?: string;
 }
 
 export function SearchBox({
   query,
   onQueryChange,
   onSubmit,
-  onDemo,
   disabled,
-  demoLabel = "Probar ahora",
 }: SearchBoxProps) {
   return (
     <form
@@ -25,7 +21,7 @@ export function SearchBox({
       }}
     >
       <label className="visually-hidden" htmlFor="search-input">
-        Búsqueda semántica
+        Búsqueda en el código
       </label>
       <input
         id="search-input"
@@ -39,14 +35,6 @@ export function SearchBox({
       <div className="search-actions">
         <button type="submit" disabled={disabled || query.trim().length < 2}>
           Buscar
-        </button>
-        <button
-          type="button"
-          className="demo"
-          onClick={onDemo}
-          data-testid="demo-button"
-        >
-          {demoLabel}
         </button>
       </div>
     </form>

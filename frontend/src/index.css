@@ -24,7 +24,7 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 1fr;
   grid-template-rows: auto 1fr;
   min-height: 100vh;
 }
@@ -73,98 +73,142 @@ body {
   color: #ffd7d7;
 }
 
-.repo-picker {
-  grid-column: 1;
-  padding: 1rem;
-  border-right: 1px solid #21262d;
+.repo-setup {
+  max-width: 640px;
+  margin: 2rem auto;
   background: #161b22;
-  min-width: 0;
-  overflow: hidden;
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  padding: 1.5rem;
 }
 
-.repo-picker h2 {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #8b949e;
-}
-
-.repo-picker ul {
-  list-style: none;
-  padding: 0;
-  margin: 0.5rem 0;
-}
-
-.repo-picker li {
-  margin: 0.25rem 0;
-}
-
-.repo-picker li button {
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
+.repo-setup-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
   color: #e6edf3;
-  padding: 0.4rem 0.5rem;
-  cursor: pointer;
+}
+
+.repo-setup-sub {
+  margin: 0 0 1rem;
+  color: #8b949e;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.repo-setup-form {
   display: flex;
-  justify-content: space-between;
   gap: 0.5rem;
+}
+
+.repo-setup-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.9rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  color: #e6edf3;
+  font-size: 0.95rem;
+}
+
+.repo-setup-form input::placeholder {
+  color: #6e7681;
+}
+
+.repo-setup-form button {
+  padding: 0.7rem 1.1rem;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #238636;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.repo-setup-form button:hover:not(:disabled) {
+  background: #2ea043;
+}
+
+.repo-setup-form button:disabled,
+.repo-setup-demo button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.repo-setup-demo {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.repo-setup-demo button {
+  padding: 0.6rem 1.1rem;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #1f6feb;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.repo-setup-demo button:hover:not(:disabled) {
+  background: #388bfd;
+}
+
+.repo-setup-demo-hint {
+  color: #8b949e;
   font-size: 0.85rem;
 }
 
-.repo-picker li button:hover,
-.repo-picker li button.active {
-  background: #21262d;
-  border-color: #30363d;
-}
-
-.repo-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.repo-status {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  padding: 0.05rem 0.4rem;
-  border-radius: 9999px;
-  flex-shrink: 0;
-}
-
-.repo-status.ready {
-  background: #1f6f3a;
-  color: #d2ffdf;
-}
-
-.repo-status.indexing {
-  background: #9e6a03;
-  color: #ffe9c7;
-}
-
-.repo-status.failed {
-  background: #a4373a;
-  color: #ffd7d7;
-}
-
-.add-repo {
-  width: 100%;
-  background: #21262d;
-  color: #e6edf3;
-  border: 1px dashed #30363d;
-  border-radius: 6px;
-  padding: 0.4rem;
-  cursor: pointer;
-}
-
 .content {
-  grid-column: 2;
+  grid-column: 1;
   padding: 1.5rem;
   max-width: 1400px;
+}
+
+.search-section {
+  margin-bottom: 1rem;
+}
+
+.section-heading {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.6rem;
+}
+
+.section-num {
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.search-section .section-num {
+  background: #238636;
+}
+
+.ask-panel .section-num {
+  background: #1f6feb;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 1rem;
+  color: #e6edf3;
+}
+
+.section-subtitle {
+  margin: 0.15rem 0 0;
+  color: #8b949e;
+  font-size: 0.85rem;
 }
 
 .search-box {
@@ -205,29 +249,6 @@ body {
 .search-box button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.search-box button.demo {
-  background: #1f6feb;
-}
-
-.search-box button.demo:hover:not(:disabled) {
-  background: #388bfd;
-}
-
-.add-form {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.add-form input {
-  flex: 1;
-  padding: 0.5rem 0.7rem;
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 8px;
-  color: #e6edf3;
 }
 
 .progress-bar {
@@ -282,34 +303,6 @@ body {
   .layout {
     grid-template-columns: 1fr;
   }
-  .repo-picker {
-    grid-column: 1;
-    border-right: 0;
-    border-bottom: 1px solid #21262d;
-    padding: 0.6rem 1rem;
-  }
-  .repo-picker h2 {
-    margin: 0;
-  }
-  .repo-picker ul {
-    display: flex;
-    gap: 0.4rem;
-    overflow-x: auto;
-    margin: 0.4rem 0 0;
-    padding-bottom: 0.25rem;
-  }
-  .repo-picker li {
-    flex-shrink: 0;
-    max-width: 68vw;
-    margin: 0;
-  }
-  .repo-picker li button {
-    width: auto;
-    max-width: 100%;
-    white-space: nowrap;
-    gap: 0.4rem;
-    border-color: #30363d;
-  }
   .content {
     grid-column: 1;
     padding: 1rem;
@@ -326,11 +319,15 @@ body {
   .search-actions button {
     flex: 1;
   }
-  .add-form {
+  .repo-setup-form {
     flex-direction: column;
   }
-  .add-form input {
+  .repo-setup-form input {
     width: 100%;
+  }
+  .repo-setup-demo {
+    flex-direction: column;
+    align-items: flex-start;
   }
   .ask-form {
     flex-direction: column;
@@ -494,12 +491,6 @@ body {
   border: 1px solid #21262d;
   border-radius: 10px;
   padding: 1rem;
-}
-
-.ask-title {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-  color: #e6edf3;
 }
 
 .ask-form {
@@ -758,4 +749,56 @@ body {
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
   font-size: 0.75rem;
   color: #e6edf3;
+}
+
+/* Modal de progreso */
+.progress-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #0d1117cc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.progress-modal {
+  pointer-events: auto;
+  max-width: 520px;
+  width: 100%;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 8px 24px #0009;
+}
+
+.progress-modal-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  color: #e6edf3;
+}
+
+.progress-modal-name {
+  margin: 0 0 0.75rem;
+  color: #8b949e;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.progress-modal-close {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #a4373a;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.progress-modal-close:hover {
+  background: #c0484d;
 }

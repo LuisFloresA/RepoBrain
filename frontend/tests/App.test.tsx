@@ -4,18 +4,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/App";
 import type { Repo } from "../src/api/types";
 import {
+  cleanupRepos,
   createRepo,
+  deleteRepo,
   getFile,
   getRepoStatus,
-  getRepos,
   searchRepo,
 } from "../src/api/client";
 
 vi.mock("../src/api/client", () => ({
-  getRepos: vi.fn(),
+  cleanupRepos: vi.fn(),
   createRepo: vi.fn(),
-  getRepoStatus: vi.fn(),
+  deleteRepo: vi.fn(),
   getFile: vi.fn(),
+  getRepoStatus: vi.fn(),
   searchRepo: vi.fn(),
   askQuestion: vi.fn(),
 }));
@@ -30,7 +32,7 @@ vi.mock("../src/components/CodeViewer", () => ({
 
 const demoRepo: Repo = {
   id: "demo1",
-  name: "Demo · login-api",
+  name: "Demo · login-api (JWT)",
   url: null,
   source: "demo",
   status: "ready",
@@ -55,7 +57,8 @@ const sampleResults = [
 ];
 
 beforeEach(() => {
-  vi.mocked(getRepos).mockResolvedValue([demoRepo]);
+  vi.mocked(cleanupRepos).mockResolvedValue();
+  vi.mocked(deleteRepo).mockResolvedValue();
   vi.mocked(searchRepo).mockResolvedValue({
     query: "jwt",
     repo_id: "demo1",
@@ -73,18 +76,55 @@ beforeEach(() => {
 });
 
 describe("App", () => {
-  it("muestra el buscador y el repo demo", async () => {
+  it("limpia sesiones previas y muestra la pantalla de entrada", async () => {
     render(<App />);
-    expect(await screen.findByPlaceholderText(/Pregunta en lenguaje natural/)).toBeInTheDocument();
-    expect(screen.getByText("Probar ahora")).toBeInTheDocument();
-    expect(await screen.findByText("Demo · login-api")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Empezar una búsqueda nueva/ })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/https:\/\/github\.com\/usuario\/repo/)).toBeInTheDocument();
+    expect(screen.getByTestId("use-demo")).toBeInTheDocument();
+    expect(cleanupRepos).toHaveBeenCalled();
+  });
+
+  it("usa el demo, muestra el modal de progreso y luego el buscador", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByTestId("use-demo"));
+    expect(createRepo).toHaveBeenCalledWith({ source: "demo", name: "Demo · login-api (JWT)" });
+
+    expect(await screen.findByRole("dialog", { name: "Cargando repositorio" })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+
+    await waitFor(
+      () => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      },
+      { timeout: 4000 },
+    );
+    expect(screen.getByPlaceholderText(/Pregunta en lenguaje natural/)).toBeInTheDocument();
+  });
+
+  it("indexa un repo por URL desde la pantalla de entrada", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const urlInput = await screen.findByPlaceholderText(/https:\/\/github\.com\/usuario\/repo/);
+    await user.type(urlInput, "https://github.com/luis/api.git");
+    await user.click(screen.getByRole("button", { name: "Indexar repo" }));
+
+    expect(createRepo).toHaveBeenCalledWith({
+      url: "https://github.com/luis/api.git",
+      source: "url",
+      branch: null,
+    });
+    expect(await screen.findByRole("dialog", { name: "Cargando repositorio" })).toBeInTheDocument();
   });
 
   it("realiza una búsqueda y muestra resultados con score", async () => {
     const user = userEvent.setup();
     render(<App />);
+    await user.click(await screen.findByTestId("use-demo"));
     const input = await screen.findByPlaceholderText(/Pregunta en lenguaje natural/);
-    await waitFor(() => expect(input).toBeEnabled());
+    await waitFor(() => expect(input).toBeEnabled(), { timeout: 4000 });
     await user.type(input, "jwt");
     await user.click(screen.getByRole("button", { name: "Buscar" }));
 
@@ -97,8 +137,9 @@ describe("App", () => {
   it("muestra el visor al hacer clic en un resultado", async () => {
     const user = userEvent.setup();
     render(<App />);
+    await user.click(await screen.findByTestId("use-demo"));
     const input = await screen.findByPlaceholderText(/Pregunta en lenguaje natural/);
-    await waitFor(() => expect(input).toBeEnabled());
+    await waitFor(() => expect(input).toBeEnabled(), { timeout: 4000 });
     await user.type(input, "jwt");
     await user.click(screen.getByRole("button", { name: "Buscar" }));
 
@@ -111,27 +152,34 @@ describe("App", () => {
     expect(getFile).toHaveBeenCalledWith("demo1", "app/auth.py");
   });
 
-  it("crea el repo demo cuando no hay ninguno y se pulsa Probar ahora", async () => {
-    vi.mocked(getRepos).mockResolvedValue([]);
+  it("muestra el modal de progreso mientras indexa y el error si falla", async () => {
+    const indexingRepo: Repo = { ...demoRepo, status: "indexing", progress: 40, message: "Parseando…" };
+    vi.mocked(createRepo).mockResolvedValue(indexingRepo);
+    vi.mocked(getRepoStatus).mockResolvedValue({ ...demoRepo, status: "failed", message: "boom" });
+
     const user = userEvent.setup();
     render(<App />);
-    await user.click(await screen.findByTestId("demo-button"));
+    await user.click(await screen.findByTestId("use-demo"));
 
-    await waitFor(() => {
-      expect(createRepo).toHaveBeenCalledWith(
-        expect.objectContaining({ source: "demo" }),
-      );
-    });
+    expect(await screen.findByRole("dialog", { name: "Cargando repositorio" })).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+
+    await waitFor(
+      () => {
+        expect(screen.getByText(/No se pudo cargar el repositorio/)).toBeInTheDocument();
+      },
+      { timeout: 4000 },
+    );
+    expect(screen.getByTestId("progress-modal-close")).toBeInTheDocument();
   });
 
-  it("muestra la barra de progreso mientras indexa", async () => {
-    const indexingRepo: Repo = { ...demoRepo, status: "indexing", progress: 40, message: "Parseando…" };
-    vi.mocked(getRepos).mockResolvedValue([indexingRepo]);
-    vi.mocked(getRepoStatus).mockResolvedValue({ ...demoRepo, status: "ready" });
-
+  it("borra el repo de la sesión al cerrar la página", async () => {
+    const user = userEvent.setup();
     render(<App />);
+    await user.click(await screen.findByTestId("use-demo"));
+    await waitFor(() => expect(createRepo).toHaveBeenCalled());
 
-    expect(await screen.findByText(/Parseando…/)).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    window.dispatchEvent(new Event("beforeunload"));
+    expect(deleteRepo).toHaveBeenCalledWith("demo1", true);
   });
 });

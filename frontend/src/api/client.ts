@@ -30,6 +30,17 @@ export async function getRepos(): Promise<Repo[]> {
   return request<Repo[]>("/api/repos");
 }
 
+export async function cleanupRepos(): Promise<void> {
+  await request<{ message: string }>("/api/repos", { method: "DELETE" });
+}
+
+export async function deleteRepo(id: string, keepalive = false): Promise<void> {
+  await request<{ message: string }>(`/api/repos/${id}`, {
+    method: "DELETE",
+    keepalive,
+  });
+}
+
 export async function createRepo(
   payload: { url?: string; name?: string; source: string; branch?: string | null },
 ): Promise<Repo> {

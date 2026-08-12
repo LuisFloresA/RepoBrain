@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.schemas import (
@@ -190,6 +190,28 @@ def get_file(repo_id: str, path: str, session: Session = Depends(get_session)) -
         content=content,
         line_count=len(content.splitlines()),
     )
+
+
+@router.delete("", response_model=MessageOut)
+def cleanup_repos(session: Session = Depends(get_session)) -> MessageOut:
+    """Borra todos los repos (limpieza de sesiones previas). Cada visita empieza de cero."""
+    repos = session.scalars(select(Repo)).all()
+    for repo in repos:
+        # Limpieza best-effort del checkout dentro del workspace
+        if repo.checkout_dir:
+            try:
+                base = Path(settings.workspace_root).resolve()
+                checkout = resolve_within(base, repo.id)
+                import shutil
+
+                if checkout.exists():
+                    shutil.rmtree(checkout)
+            except (ValueError, OSError):
+                pass
+        search_service.invalidate(repo.id)
+        session.delete(repo)
+    session.commit()
+    return MessageOut(message=f"{len(repos)} repos eliminados")
 
 
 @router.delete("/{repo_id}", response_model=MessageOut)
