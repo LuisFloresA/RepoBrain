@@ -140,8 +140,6 @@ Detalle en [`docs/seguridad.md`](docs/seguridad.md).
 - [`docs/seguridad.md`](docs/seguridad.md) — matriz de amenazas.
 - [`docs/deploy-oci.md`](docs/deploy-oci.md) — despliegue en OCI + Cloudflare Tunnel.
 - [`docs/write-up-tecnico.md`](docs/write-up-tecnico.md) — write-up del blog.
-- `01-repobrain-busqueda-semantica-codigo.md` — especificación de diseño
-  (fuente de verdad).
 
 ## Licencia
 

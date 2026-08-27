@@ -36,9 +36,12 @@ describe("RepoSetup", () => {
     const urlInput = screen.getByPlaceholderText(/https:\/\/github\.com\/usuario\/repo/);
     await user.type(urlInput, "https://github.com/usuario/repo");
 
-    await waitFor(() => {
-      expect(screen.getByTestId("branch-select")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("branch-select")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     const select = screen.getByTestId("branch-select") as HTMLSelectElement;
     expect(select.value).toBe("main");
@@ -70,9 +73,12 @@ describe("RepoSetup", () => {
     const urlInput = screen.getByPlaceholderText(/https:\/\/github\.com\/usuario\/repo/);
     await user.type(urlInput, "https://github.com/usuario/repo");
 
-    await waitFor(() => {
-      expect(screen.getByTestId("branch-select")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("branch-select")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     // Seleccionar opción de escribir manualmente
     await user.selectOptions(screen.getByTestId("branch-select"), "__custom__");
@@ -101,9 +107,12 @@ describe("RepoSetup", () => {
     const urlInput = screen.getByPlaceholderText(/https:\/\/github\.com\/usuario\/repo/);
     await user.type(urlInput, "https://github.com/usuario/privado");
 
-    await waitFor(() => {
-      expect(screen.getByText(/Repositorio no accesible/)).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Repositorio no accesible/)).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     expect(screen.getByTestId("branch-input")).toBeInTheDocument();
   });

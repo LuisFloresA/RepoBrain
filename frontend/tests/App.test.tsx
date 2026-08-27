@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../src/App";
-import type { Repo } from "../src/api/types";
+import type { Repo, SearchResponse } from "../src/api/types";
 import {
   cleanupRepos,
   createRepo,
@@ -190,11 +190,11 @@ describe("App", () => {
   });
 
   it("muestra la pantalla de carga durante la búsqueda y estado sin resultados", async () => {
-    let resolveSearch: (val: any) => void;
-    const searchPromise = new Promise((resolve) => {
+    let resolveSearch: (val: SearchResponse) => void;
+    const searchPromise = new Promise<SearchResponse>((resolve) => {
       resolveSearch = resolve;
     });
-    vi.mocked(searchRepo).mockReturnValue(searchPromise as any);
+    vi.mocked(searchRepo).mockReturnValue(searchPromise);
 
     const user = userEvent.setup();
     render(<App />);
