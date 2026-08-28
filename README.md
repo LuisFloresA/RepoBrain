@@ -41,11 +41,10 @@ LLM_PROVIDER=deepseek LLM_API_KEY=... docker compose up -d --build
 Proveedores soportados: `openai`, `deepseek`, `gemini`, `ollama` (protocolo
 `/chat/completions`).
 
-## Producción (OCI + Cloudflare Tunnel)
+## Producción (Docker + Cloudflare Tunnel)
 
-Stack autocontenido en una VM que **no expone puertos** al host y soporta
-**repos privados** (deploy key SSH). Guía completa y pasos en
-[`docs/deploy-oci.md`](docs/deploy-oci.md):
+Stack autocontenido que **no expone puertos** al host y soporta
+**repos privados** (deploy key SSH):
 
 ```bash
 git clone https://github.com/LuisFloresA/RepoBrain.git && cd RepoBrain
@@ -119,7 +118,7 @@ npm run build
 | F2 | Q&A con LLM y citas validadas | ✅ |
 | F3 | Pulido: docs, hardening (rate limit, secretos), CI | ✅ |
 | F4 | Responsividad, ramas, Java/C#, indexación incremental, métricas, mapa de arquitectura | ✅ |
-| F5 | Producción en OCI vía Cloudflare Tunnel (guía: `docs/deploy-oci.md`) | ✅ |
+| F5 | Producción vía Docker + Cloudflare Tunnel | ✅ |
 
 ## Seguridad
 
@@ -138,8 +137,6 @@ Detalle en [`docs/seguridad.md`](docs/seguridad.md).
 - [`docs/api.md`](docs/api.md) — endpoints con ejemplos curl.
 - [`docs/demo.md`](docs/demo.md) — guión de demo de 2 minutos.
 - [`docs/seguridad.md`](docs/seguridad.md) — matriz de amenazas.
-- [`docs/deploy-oci.md`](docs/deploy-oci.md) — despliegue en OCI + Cloudflare Tunnel.
-- [`docs/write-up-tecnico.md`](docs/write-up-tecnico.md) — write-up del blog.
 
 ## Licencia
 

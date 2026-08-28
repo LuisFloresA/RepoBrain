@@ -31,7 +31,7 @@ modelo de datos, API, seguridad, despliegue, pruebas y decisiones de diseño.
 15. [Pruebas y calidad](#15-pruebas-y-calidad)
 16. [Decisiones de diseño (ADRs)](#16-decisiones-de-diseño-adrs)
 17. [Fases del proyecto](#17-fases-del-proyecto)
-18. [Operación real en OCI](#18-operación-real-en-oci)
+18. [Operación en producción](#18-operación-en-producción)
 19. [Evolución propuesta](#19-evolución-propuesta)
 
 ---
@@ -48,8 +48,8 @@ grep busca cadenas exactas; RepoBrain busca intención.
   línea exacta.
 - Funciona **sin API key, sin registro y sin red** para el repo de demo
   (embebido y pre-indexado dentro de la imagen).
-- Está desplegado en producción en una VM de OCI, expuesto públicamente a
-  través de **Cloudflare Quick Tunnel** (sin abrir puertos en la VM).
+- Está preparado para producción como stack Docker autocontenido, expuesto
+  públicamente a través de **Cloudflare Quick Tunnel** (sin abrir puertos en el host).
 
 ### Características clave
 
@@ -112,7 +112,7 @@ grep busca cadenas exactas; RepoBrain busca intención.
 | Frontend prod | `nginx:1.27-alpine` multi-stage |
 | Exposición pública | **cloudflare/cloudflared** (Quick Tunnel) → `https://XXX.trycloudflare.com` |
 | CI | GitHub Actions (`ubuntu-latest`): backend (ruff+pytest+cov), frontend (lint+test+build), docker build |
-| VM | OCI Ampere A1 (ARM64), Ubuntu 24.04; persistencia en `/opt/repobrain` |
+| Servidor / VM | Linux (ARM64 / x86_64, Ubuntu 24.04), Docker + Compose; persistencia en `/opt/repobrain` |
 
 ---
 
@@ -217,9 +217,7 @@ RepoBrain/
 │   ├── arquitectura.md            # componentes + ADRs
 │   ├── api.md                     # endpoints con ejemplos curl
 │   ├── demo.md                    # guión de demo de 2 min
-│   ├── seguridad.md               # matriz de amenazas
-│   ├── deploy-oci.md              # guía de despliegue OCI + Cloudflare
-│   └── write-up-tecnico.md        # texto para el blog del portafolio
+│   └── seguridad.md               # matriz de amenazas
 ├── demo/data/                     # demo embebida "login-api" (Python + JS)
 │   └── app/{auth,db,models,routes}.py, web/api.js, README.md
 ├── backend/
@@ -833,8 +831,7 @@ services:
 ```
 
 - **Demo horneada** en la imagen (`/app/demo/data`) — sin depender de montajes del host.
-- Persistencia en **block volume OCI** `/opt/repobrain` (data, workspace, cache,
-  secrets). Cache del modelo HF en `/app/cache/huggingface`.
+- Persistencia en `/opt/repobrain` (data, workspace, cache, secrets). Cache del modelo HF en `/app/cache/huggingface`.
 - La **URL pública** la da el túnel: `docker compose -f docker-compose.prod.yml
   logs -f tunnel` → `https://XXXXX.trycloudflare.com` (cambia en cada arranque
   del túnel; URL estable requiere dominio + Cloudflare named tunnel).
@@ -860,14 +857,12 @@ services:
 - `docker-entrypoint.sh`: `exec nginx -g 'daemon off;'` (con `set -eu`, LF
   garantizado por `.gitattributes`).
 
-### 14.5. Despliegue real en OCI (resumen de lo ejecutado)
+### 14.5. Despliegue en servidor / VM (resumen de ejecución)
 
-1. VM Ampere (ARM64) Ubuntu 24.04, Docker 29.x + Compose 5.x, **sin block
-   volume** (persistencia en 43 GB libres de `/`), convive con
-   `techdebt-radar-prod`.
+1. Servidor/VM Linux (Ubuntu 24.04), Docker 29.x + Compose 5.x (persistencia en `/opt/repobrain`).
 2. `/opt/repobrain/{data,workspace,cache,secrets}` con `chown 10001:10001`
    (secrets `700`).
-3. Build de las imágenes en la VM (backend prod ~8.86 GB con torch; frontend
+3. Build de las imágenes en el host (backend prod ~8.86 GB con torch; frontend
    ~94 MB). Primer build ~10–20 min; capas cacheadas después.
 4. Deploy key ed25519 (`repobrain-deploy`) → `/opt/repobrain/secrets/
    git_deploy_key` (600), registrada como deploy key solo-lectura del repo
@@ -974,24 +969,23 @@ Documento canónico: `docs/arquitectura.md`. Resumen:
 | F2 | Q&A con LLM y citas validadas | ✅ |
 | F3 | Pulido: docs, hardening (rate limit, secretos), CI | ✅ |
 | F4 | Responsividad, ramas, Java/C#, indexación incremental, métricas, mapa de arquitectura | ✅ |
-| F5 | Producción en OCI vía Cloudflare Tunnel | ✅ |
+| F5 | Producción vía Docker + Cloudflare Tunnel | ✅ |
 
 ---
 
-## 18. Operación real en OCI
+## 18. Operación en producción
 
-Estado verificado del despliegue (producción):
+Estado verificado del despliegue:
 
 | Aspecto | Valor |
 |---|---|
-| Host | `vnic1` (OCI ARM64, Ubuntu 24.04, 1 OCPU / ~5.8 GB RAM) |
-| Docker / Compose | 29.7.2 / 5.4.0 |
+| Host | Servidor / VM Linux (Ubuntu 24.04) |
+| Docker / Compose | Docker Engine + Docker Compose v2 |
 | Stack | `repobrain-prod` (redis, backend, worker, frontend, tunnel) |
 | Persistencia | `/opt/repobrain/{data,workspace,cache,secrets}` |
-| Imágenes | `repobrain-backend:prod` (~8.86 GB), `repobrain-frontend:prod` (~94 MB) |
+| Imágenes | `repobrain-backend:prod`, `repobrain-frontend:prod` |
 | Exposición | Quick Tunnel de Cloudflare (`...trycloudflare.com`) |
-| Demos | RepoBrain + TechDebt-Radar (gemelo, otra imagen/compose) |
-| Repos remotos | migrados a **deploy keys SSH** de solo lectura (sin PAT) |
+| Repos remotos | **deploy keys SSH** de solo lectura (sin PAT) |
 
 ### Operaciones comunes
 

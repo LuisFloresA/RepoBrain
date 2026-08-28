@@ -112,7 +112,7 @@ Cliente (React) -> API (FastAPI) -> Celery/Redis -> Worker (tree-sitter + embedd
   pequeños OK, repos gigantes exigirían caché por `source_rev`).
 
 ### ADR-008 — Repos privados vía SSH con deploy key (solo hosts conocidos)
-- **Contexto**: producción en OCI debe indexar repos privados de
+- **Contexto**: el entorno de producción debe indexar repos privados de
   GitHub/GitLab/Bitbucket sin credenciales propias del usuario.
 - **Decisión**: `validate_clone_url` acepta `http(s)` (SSRF-check) y URLs SSH
   (`git@host:owner/repo.git` o `ssh://git@host/...`) **únicamente** hacia
